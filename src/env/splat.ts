@@ -58,6 +58,20 @@ function toTexture(c: HTMLCanvasElement): THREE.Texture {
   return t;
 }
 
+/**
+ * OSM ponds and runoff basins within ~700 m of the pad are not drawn: the photo shows the foreground mud dry-ish with a
+ * few large authored pools (terrain.ts AUTHORED_POOLS), and the mapped ditch west of the pad is that lagoon's much
+ * thinner outline. Larger mapped water (Boca Chica Bay, ponds further out) is kept.
+ */
+function skipWater(f: SiteFeature): boolean {
+  if (f.geom !== 'polygon' || f.points.length < 3) return false;
+  if (f.tags.water !== 'pond' && f.tags.water !== 'basin') return false;
+  let cx = 0, cz = 0;
+  for (const p of f.points) { cx += p[0]; cz += p[1]; }
+  cx /= f.points.length; cz /= f.points.length;
+  return Math.hypot(cx, cz) < 700;
+}
+
 function rasterise(site: SiteData, half: number, nA: number, nB: number): { a: THREE.Texture; b: THREE.Texture } {
   const A = makeCanvas(nA), B = makeCanvas(nB);
   const build = (cv: { ctx: CanvasRenderingContext2D }, n: number) => {
@@ -73,6 +87,7 @@ function rasterise(site: SiteData, half: number, nA: number, nB: number): { a: T
   for (const f of of('other')) if (f.tags.landuse === 'construction') drawFeature(A.ctx, f, a.tx, a.tz, '#a00', 0, a.s);
   for (const f of of('scrub')) drawFeature(A.ctx, f, a.tx, a.tz, '#0f0', 0, a.s);
   for (const f of of('water')) {
+    if (skipWater(f)) continue;
     const w = f.tags.waterway === 'river' ? 18 : f.tags.waterway === 'stream' ? 6 : 4;
     drawFeature(A.ctx, f, a.tx, a.tz, '#00f', w, a.s);
   }
@@ -94,6 +109,7 @@ function rasterise(site: SiteData, half: number, nA: number, nB: number): { a: T
   const prev = B.ctx.filter;
   B.ctx.filter = `blur(${blurPx.toFixed(1)}px)`;
   for (const f of of('water')) {
+    if (skipWater(f)) continue;
     const w = f.tags.waterway === 'river' ? 40 : f.tags.waterway === 'stream' ? 14 : 12;
     drawFeature(B.ctx, f, b.tx, b.tz, '#00f', w, b.s);
   }

@@ -6,6 +6,7 @@ import type { Globals } from '../contracts.ts';
 import { applyGlobals } from '../core/material-hooks.ts';
 import { INNER_HALF } from './splat.ts';
 import { rng } from './noise.ts';
+import { authoredPoolSdf, roadCorridorAcross } from './terrain.ts';
 
 const MAX_TUFTS = 60000;
 const RADIUS = 70;          // tufts are laid within this distance of the camera (m)
@@ -110,6 +111,9 @@ export class Vegetation {
       const i = pz * n + px;
       const veg = data[i] / 255;
       if (veg < 0.5 || flat[i] > 200 && veg < 0.8) continue;
+      // no grass in the authored pools (and their damp shore band) or in the dark wet road corridor
+      if (authoredPoolSdf(x, z) < 22) continue;
+      if (x < -170 && h > 0.12) { const a = roadCorridorAcross(x, z); if (a < 90 && a > -230) continue; }
       const sz = 0.22 + 0.34 * r() * r() + 0.14 * r();
       pos.set(x, 0, z);
       q.setFromAxisAngle(up, r() * Math.PI);
