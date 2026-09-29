@@ -182,6 +182,11 @@ float cloudDensity(vec3 p, vec4 m, bool fine, out float skip, out vec4 geo) {
   // the base undulates gently at the scale of the big billows (tens of metres), so it is no perfect flat disc
   float hbOff = (ns.b - 0.6) * mix(50.0, 80.0, rag);
   if (fine) {
+    if (rag > 0.3) {
+      // decaying fragments are torn into horizontal shreds (fractus): detail cells stretched ~2x sideways
+      vec3 tn = textureLod(uNoiseD, p * vec3(1.0 / 1100.0, 1.0 / 480.0, 1.0 / 1100.0) + 0.37, 0.0).rgb;
+      s += (rag - 0.3) * (1.0 / 0.7) * uCloudX.w * 1.2 * (0.6 * tn.r + 0.4 * tn.g - 0.6);
+    }
     vec3 nd = textureLod(uNoiseD, p / uShapeScale.y, 0.0).rgb;
     s += uShape.y * 2.0 * (0.6 * bulge(nd.r) + 0.4 * bulge(nd.g) - 0.64) * mix(0.5, 1.0, up);
     // fringe erosion in the creases between the smallest detail cells: torn, wispy edges (ragged cells much more)

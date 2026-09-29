@@ -128,10 +128,18 @@ function fromPhoto(c: PhotoCell, topBias = 100): CloudCell {
  * A small fragment along the horizon, authored by its photo column, the row of its top and the row of its BOTTOM
  * silhouette (the far edge of its base): the range follows from the base row, the height from the top row.
  */
-function frag(u: number, top: number, bottom: number, r: number, rag: number, e = 0.8): PhotoCell {
+function frag(u: number, top: number, bottom: number, r: number, rag: number, e = 0.8): PhotoCell[] {
   const d = photoRay(u, bottom);
   const far = (CLOUD_BASE - cam.pos.y) / Math.max(d.y, 1e-3) * Math.hypot(d.x, d.z);   // horizontal range of the far base edge
-  return { u, top, range: Math.max(3, far / 1000 - r * e), r, e, rag };
+  const range = Math.max(3, far / 1000 - r * e);
+  // a torn fragment is a broken, flat piece: a main lump plus a lower shred to each side, ~2-3x wider than tall
+  const px = (r / range) * 1133;                        // footprint radius in photo pixels (focal length 1133 px)
+  const hRows = bottom - top;
+  return [
+    { u, top, range, r: r * 0.7, e, rag },
+    { u: u - px * 0.75, top: top + hRows * 0.4, range: range + r * 0.3, r: r * 0.5, e: e * 0.8, rag: Math.min(1, rag + 0.1) },
+    { u: u + px * 0.7, top: top + hRows * 0.25, range: range - r * 0.2, r: r * 0.55, e: e * 0.8, rag: Math.min(1, rag + 0.1) },
+  ];
 }
 
 // Authored against research/reference.jpeg (1677x943). The lowest visible row of a cloud is the FAR edge of its flat
@@ -179,21 +187,21 @@ export const PHOTO_CELLS: PhotoCell[] = [
  * they sit in the long shadows that the low sun casts from cumulus further east (see horizonCasters).
  */
 export const HORIZON_FRAGS: PhotoCell[] = [
-  frag(620, 422, 449, 0.26, 0.55),
-  frag(890, 417, 446, 0.2, 0.95, 0.6),
-  frag(995, 414, 460, 0.42, 0.6, 0.7),
-  frag(1110, 407, 452, 0.36, 0.55),
-  frag(1215, 404, 446, 0.3, 0.6),
-  frag(575, 468, 490, 0.28, 0.85),
-  frag(705, 457, 476, 0.32, 0.8),
-  frag(790, 461, 480, 0.28, 0.85),
-  frag(880, 454, 481, 0.45, 0.7, 0.6),
-  frag(965, 459, 482, 0.36, 0.75),
-  frag(1055, 458, 484, 0.42, 0.7),
-  frag(1150, 462, 486, 0.38, 0.75),
+  ...frag(620, 422, 449, 0.26, 0.55),
+  ...frag(890, 417, 446, 0.2, 0.95, 0.6),
+  ...frag(995, 414, 460, 0.42, 0.6, 0.7),
+  ...frag(1110, 407, 452, 0.36, 0.55),
+  ...frag(1215, 404, 446, 0.3, 0.6),
+  ...frag(575, 468, 490, 0.28, 0.85),
+  ...frag(705, 457, 476, 0.32, 0.8),
+  ...frag(790, 461, 480, 0.28, 0.85),
+  ...frag(880, 454, 481, 0.45, 0.7, 0.6),
+  ...frag(965, 459, 482, 0.36, 0.75),
+  ...frag(1055, 458, 484, 0.42, 0.7),
+  ...frag(1150, 462, 486, 0.38, 0.75),
   // left of the ridge, low (behind the west steam bank in the photo)
-  frag(150, 452, 470, 0.5, 0.7, 0.6),
-  frag(420, 462, 484, 0.45, 0.75, 0.6),
+  ...frag(150, 452, 470, 0.5, 0.7, 0.6),
+  ...frag(420, 462, 484, 0.45, 0.75, 0.6),
 ];
 
 /**
@@ -284,7 +292,8 @@ export function cumulusCells(x: number, z: number, rMain: number, tall: number, 
   const tRag = Math.max(0, rag - 0.12);
   // tower: a stack of round lobes rising out of the body, tapering upward (a congestus is broadest low down and
   // narrows into its cauliflower crown), leaning a little with a random walk
-  const r0 = rMain * (0.82 + 0.12 * jit[3]), r1 = rMain * (0.46 + 0.12 * jit[4]);
+  // a congestus is about as broad at its crown as low down (a cauliflower head on a column): only a mild taper
+  const r0 = rMain * (0.8 + 0.12 * jit[3]), r1 = r0 * (0.68 + 0.14 * jit[4]);
   const z0 = hb * 0.4;
   const n = Math.max(1, Math.min(5, Math.round((h - z0) / (1.25 * 0.5 * (r0 + r1)))));
   let ox = 0, oz = 0;
@@ -302,13 +311,13 @@ export function cumulusCells(x: number, z: number, rMain: number, tall: number, 
     // lobes are spaced ~1.25 radii apart and ~2 radii tall, so each reaches well into the one below (one column)
     out.push({ x: x + ox, z: z + oz, r: rt, rAlong: rt * (0.9 + 0.2 * jit[(11 + k) % 16]), axis: lean, h: top, yc, rag: tRag });
   }
-  // cauliflower crown: two or three shoulders around the upper lobes
-  const nS = 2 + Math.floor(jit[13] * 1.99);
+  // cauliflower crown: three or four rounded shoulders bulging out around the upper lobes
+  const nS = 3 + Math.floor(jit[13] * 1.99);
   for (let k = 0; k < nS; k++) {
-    const rs = rMain * (0.3 + 0.14 * jit[(14 + k) % 16]);
-    const a = axis + k * 2.3 + 1.1 * jit[(2 + k) % 16];
-    const d = r1 * (0.55 + 0.4 * jit[(7 + k) % 16]);
-    const top = z0 + (h - z0) * (0.62 + 0.3 * jit[(10 + k) % 16]);
+    const rs = rMain * (0.34 + 0.16 * jit[(14 + k) % 16]);
+    const a = axis + k * (6.283 / nS) + 0.9 * jit[(2 + k) % 16];
+    const d = r1 * (0.6 + 0.45 * jit[(7 + k) % 16]);
+    const top = z0 + (h - z0) * (0.66 + 0.3 * jit[(10 + k) % 16]);
     const yc = Math.max(0, top - rs * 0.95);
     out.push({ x: x + ox * 0.8 + d * Math.sin(a), z: z + oz * 0.8 - d * Math.cos(a), r: rs, rAlong: rs, axis: 0, h: top, yc, lo: 1.3, rag: tRag });
   }
@@ -350,7 +359,8 @@ let cellCache: CloudCell[] | null = null;
 export function allCells(): CloudCell[] {
   if (!cellCache) {
     const frags = HORIZON_FRAGS.map((c) => fromPhoto(c));
-    cellCache = [...PHOTO_CELLS.map((c) => fromPhoto(c)), ...frags, ...horizonCasters(frags), ...proceduralCells()];
+    // one shadow caster per fragment (frag() emits a main lump and two shreds)
+    cellCache = [...PHOTO_CELLS.map((c) => fromPhoto(c)), ...frags, ...horizonCasters(frags.filter((_, i) => i % 3 === 0)), ...proceduralCells()];
   }
   return cellCache;
 }
