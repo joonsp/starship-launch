@@ -9,25 +9,37 @@ varying vec2 vUv;
 uniform int   uFace;
 uniform vec3  uBakePos;        // camera position at bake time (world, m)
 uniform vec3  uSunDir;         // toward the sun
-uniform vec3  uCloudSunDir;    // light direction used for the clouds (sun lifted a little: multiple scattering brightens tops)
+uniform vec3  uCloudSunDir;    // light direction for the clouds (sky.ts blends the true and the preset's lifted sun)
 uniform vec3  uE0;             // extraterrestrial sun irradiance for the atmosphere (scene units)
 uniform float uMsGain;         // multiple-scattering gain
-uniform vec3  uSunLight;       // ground-level sun light (colour * intensity) used to light clouds
+uniform vec3  uSunLight;       // sun light (colour * intensity) that lights the clouds
 uniform vec3  uAmbTop;         // cloud ambient radiance from the sky (top)
 uniform vec3  uAmbBottom;      // cloud ambient radiance from the ground (bottom)
-uniform vec4  uCloud;          // x base, y top (absolute m), z max iterations, w enable
-uniform vec4  uCirrus;         // x strength, y altitude (m), z streak angle (rad), w unused
-uniform vec4  uWeather;        // x cloud density scale, y cloud coarseness, z haze per metre, w night (stars) strength
+uniform vec4  uCloud;          // x base, y top (absolute m), z max in-cloud samples, w enable
+uniform vec4  uCirrus;         // x strength, y altitude (m), z streak heading (rad), w angular size of a cube texel (rad)
+uniform vec4  uCirrusLit;      // x sun gain, y sky gain, z forward peak, w coverage of the broad random patches
+uniform vec4  uCirrusPatch[6]; // authored patches: xy centre (km), z radius (km), w strength
+uniform vec4  uContrail;       // xy centre (km), z heading (rad), w half length (km); w = 0 disables it
+uniform vec4  uWeather;        // x cloud density scale, y unused, z haze per metre, w night (stars) strength
 uniform vec3  uHorizonTint;    // multiplies the sky near the horizon
+uniform vec4  uLook;           // x = chroma gain aloft, y/z = rd.y range over which it ramps in, w = horizon-tint falloff
 uniform vec3  uSkyFloor;       // night-sky glow added to the sky (0 by day)
 uniform vec3  uGround;         // radiance of the ground hemisphere (env cube only)
 uniform float uBelow;          // 1 = paint the lower hemisphere with uGround (env cube), 0 = clamp to horizon sky
 uniform float uDebug;
-uniform sampler2D uCover;
-uniform sampler3D uNoiseS;
-uniform sampler3D uNoiseD;
-
-const float COVER_EXT = 26000.0;
+uniform sampler2D uCover;      // cloud-layout.ts: R top of the cells (debug), G inside distance, A outside distance
+uniform sampler3D uEnv;        // cloud-layout.ts: signed distance to the smooth union of the cells (0.5 = surface)
+uniform vec4  uVolInfo;        // x half extent (m), y bottom altitude (m), z height (m), w signed-distance range (m)
+uniform sampler3D uNoiseS;     // R Perlin-Worley, GBA inverted Worley (4/8/16 cells per tile)
+uniform sampler3D uNoiseD;     // RGB inverted Worley (3/6/12 cells per tile)
+uniform vec4  uCoverInfo;      // x map half extent (m), y inside-distance range (m), z outside-distance range (m), w texel (m)
+uniform vec4  uShape;          // x billow amplitude (m), y fine-billow amplitude (m), z edge softness (m), w extinction (1/m)
+uniform vec4  uShapeScale;     // x shape-noise tile (m), y detail-noise tile (m), z base wander (m), w first light step (m)
+uniform vec3  uShapeW;         // weights of the three billow octaves (sum 1)
+uniform vec4  uStep;           // x in-cloud step per metre of range, y min step (m), z max step (m), w max light steps
+uniform vec4  uCloudLit;       // x sun gain, y sky-ambient gain, z ground-ambient gain, w ambient diffusion length (m)
+uniform vec4  uCloudPhase;     // x forward g, y backward g, z backward weight, w bounce (sunlight re-scattered by lit neighbours)
+uniform vec4  uCloudMs;        // Wrenninge octaves: x extinction factor, y contribution factor, z eccentricity factor, w octaves
 
 vec3 faceDir(int f, float sc, float tc) {
   if (f == 0) return vec3(1.0, -tc, -sc);
@@ -50,133 +62,210 @@ float fbm2(vec2 p, int oct) {
   return s / nrm;
 }
 
-// ------------------------------------------------------------------ cirrus: thin fibrous streaks at high altitude
-// returns premultiplied colour in rgb and opacity in a
+// ------------------------------------------------------------------ cirrus: fibrous mares' tails on a high deck
+// Streaks run along uCirrus.z (heading) with a slow wander and bent heads (hooks); fine fibres are faded out where one
+// cube texel covers them (no aliasing toward the horizon). Coverage is patchy (broad noise) plus art-directed patches
+// (cloud-layout.ts CIRRUS_PATCHES) and one contrail. Returns premultiplied colour in rgb and opacity in a.
 vec4 cirrus(vec3 ro, vec3 rd, vec3 amb) {
-  if (uCirrus.x <= 0.0 || rd.y < 0.015) return vec4(0.0);
+  if (uCirrus.x <= 0.0 || rd.y < 0.01) return vec4(0.0);
   float t = (uCirrus.y - ro.y) / rd.y;
-  vec2 xz = (ro.xz + rd.xz * t) * 1.0e-3;                 // kilometres
-  float c = cos(uCirrus.z), s = sin(uCirrus.z);
-  vec2 q = vec2(c * xz.x + s * xz.y, -s * xz.x + c * xz.y);
-  // anisotropic: long along x, thin across y
-  vec2 uv = vec2(q.x * 0.30, q.y * 0.95);
-  float warp = fbm2(uv * 0.55 + 4.0, 4);
-  vec2 w = vec2(warp - 0.5, fbm2(uv * 0.7 + 11.0, 4) - 0.5);
-  float n = fbm2(uv * vec2(1.0, 1.9) + w * 2.6, 5);
-  float veil = fbm2(xz * 0.09 + 21.0, 4);                    // broad cirrostratus veil
-  float streak = smoothstep(0.44, 0.85, n);
-  // fine fibres
-  float fib = fbm2(uv * vec2(1.6, 3.6) + w * 3.4 + 7.7, 3);
-  streak *= 0.45 + 0.9 * fib;
-  float a = clamp(streak * (0.35 + 0.65 * veil), 0.0, 1.0) * 0.42 * uCirrus.x;
-  a *= smoothstep(0.07, 0.30, rd.y);                     // fade near the horizon (foreshortened, aliased)
+  if (t <= 0.0) return vec4(0.0);
+  vec2 xz = (ro.xz + rd.xz * t) * 1.0e-3;                 // km on the cirrus deck
+  float fp = t * 1.0e-3 * uCirrus.w / max(rd.y, 0.05);    // footprint of one cube texel on the deck (km, foreshortened)
+  // coverage: broad patches plus the authored ones
+  float cov = smoothstep(0.56, 0.8, fbm2(xz * 0.02 + vec2(3.7, 1.3), 4)) * uCirrusLit.w;
+  for (int i = 0; i < 6; i++) {
+    vec4 P = uCirrusPatch[i];
+    if (P.w <= 0.0) continue;
+    cov = max(cov, P.w * (1.0 - smoothstep(0.3, 1.0, length(xz - P.xy) / P.z)));
+  }
+  // contrail: a straight, slowly spreading line segment
+  float trail = 0.0;
+  if (uContrail.w > 0.0) {
+    vec2 cd = vec2(sin(uContrail.z), -cos(uContrail.z));
+    vec2 rel = xz - uContrail.xy;
+    float along = dot(rel, cd), across = dot(rel, vec2(-cd.y, cd.x));
+    float w = 0.035 + 0.045 * clamp(along / uContrail.w * 0.5 + 0.5, 0.0, 1.0) + 0.5 * fp;
+    trail = exp(-(across * across) / (w * w)) * (0.07 / w) * (1.0 - smoothstep(0.75, 1.0, abs(along) / uContrail.w));
+    trail *= 0.75 + 0.25 * fbm2(vec2(along * 3.0, 0.5), 2);
+  }
+  if (cov < 0.004 && trail < 0.004) return vec4(0.0);
+  // streak frame: along / across the local heading
+  float ang = uCirrus.z + 0.7 * (fbm2(xz * 0.03 + 9.1, 3) - 0.5);
+  vec2 dir = vec2(sin(ang), -cos(ang));
+  vec2 q = vec2(dot(xz, dir), dot(xz, vec2(-dir.y, dir.x)));
+  // hooks and wavy tails: bend the streak lines (the bend grows along each streak, so the tails curl)
+  q.y += 1.4 * (fbm2(q * vec2(0.04, 0.22) + 5.3, 4) - 0.5);
+  float band = fbm2(vec2(q.x * 0.06, q.y * 1.9), 4);
+  // streaks are broken into tails of a few km, thick at the head and fraying out
+  float seg = fbm2(vec2(q.x * 0.22, q.y * 0.9) + 31.0, 3);
+  float streak = smoothstep(0.5, 0.74, band) * smoothstep(0.35, 0.65, seg);
+  float fibAA = 1.0 - smoothstep(0.04, 0.16, fp);
+  float fib = mix(0.5, fbm2(vec2(q.x * 0.35, q.y * 9.0) + 17.0, 4), fibAA);
+  fib = smoothstep(0.3, 0.8, fib);
+  // streaks, plus a thin milky veil where the deck is dense (the photo's upper right)
+  float a = streak * (0.15 + 0.85 * fib) * cov * 0.42 + cov * cov * 0.15 + trail * 0.28;
+  a = clamp(a, 0.0, 0.8) * uCirrus.x * smoothstep(0.01, 0.12, rd.y);
+  // ice crystals: a strong forward peak toward the sun, lit by a slightly whiter sun than at the ground, plus skylight
   float mu = dot(rd, uSunDir);
-  vec3 sunN = mix(vec3(sl_luma(uSunLight)), uSunLight, 0.45);
-  vec3 lit = sunN * (0.17 + 0.10 * pow(max(mu, 0.0), 3.0)) + amb * 0.95;
+  float ph = 1.0 + 0.4 * mu + uCirrusLit.z * pow(max(mu, 0.0), 8.0);
+  vec3 sun = mix(vec3(sl_luma(uSunLight)), uSunLight, 0.75);
+  vec3 lit = sun * (uCirrusLit.x / 3.14159265) * ph + amb * uCirrusLit.y;
   return vec4(lit * a, a);
 }
 
 // ------------------------------------------------------------------ cumulus
-float cloudCover(vec3 p, out vec4 c) {
-  c = textureLod(uCover, p.xz / (2.0 * COVER_EXT) + 0.5, 0.0);
-  return c.r;
+// Each column of the coverage map holds the union of dome-topped towers standing on the common base. The density is
+// the signed distance to that envelope, displaced by round Worley billows (cauliflower) and a finer billow octave,
+// divided by a thin edge softness: solid cores, crisp cauliflower silhouettes, flat bases.
+
+vec4 coverAt(vec2 xz) {
+  vec2 uv = xz / (2.0 * uCoverInfo.x) + 0.5;
+  if (uv.x <= 0.0 || uv.y <= 0.0 || uv.x >= 1.0 || uv.y >= 1.0) return vec4(0.0, 0.0, 0.0, 1.0);
+  return textureLod(uCover, uv, 0.0);
 }
 
-// density 0..1 at a world position; `fine` adds the erosion detail
-float cloudDensity(vec3 p, vec4 c, bool fine) {
-  float cover = c.r;
-  float depth = uCloud.y - uCloud.x;
-  float top = max(c.g, 0.05) * depth;
-  // the base is not a perfect plane: low-frequency wander of about +-130 m, more for the towering clusters
-  float baseOff = (textureLod(uNoiseS, vec3(p.xz * (1.0 / 4300.0), 0.31), 0.0).g - 0.45) * 300.0;
-  float h = (p.y - uCloud.x - baseOff) / top;
-  if (h <= 0.0 || h >= 1.0) return 0.0;
-  float type = c.b;
-  // envelope: flat base, fat middle, domed top (taller clusters keep their body higher)
-  float prof = smoothstep(0.0, 0.16, h) * (1.0 - smoothstep(0.22 + 0.30 * type, 1.0, h));
-  float env = cover * prof;
-  vec3 sp = p * (1.0 / 2300.0);
-  vec4 ns = textureLod(uNoiseS, sp, 0.0);
-  // billows: perlin-worley + worley octaves (mean ~0.5)
-  float shape = ns.r * 0.22 + ns.g * 0.34 + ns.b * 0.28 + ns.a * 0.16;
-  float B = 2.3 * uWeather.y;
-  float f = env * 1.30 + (shape - 0.45) * B - 0.50;
-  float d = clamp(f * 1.9, 0.0, 1.0);
-  if (fine && d > 0.0) {
-    vec3 nd = textureLod(uNoiseD, p * (1.0 / 640.0), 0.0).rgb;
-    float det = nd.r * 0.5 + nd.g * 0.32 + nd.b * 0.18;
-    d = clamp(d - (det - 0.40) * 1.7 * (1.0 - 0.45 * d), 0.0, 1.0);
+// The condensation level is nearly flat: a slow wander of a few tens of metres.
+float baseAt(vec2 xz) { return uCloud.x + (textureLod(uNoiseS, vec3(xz * (1.0 / 9000.0), 0.31), 0.0).g - 0.48) * uShapeScale.z; }
+
+// Round billow profile from inverted Worley (w = 1 - F1): a hemispherical bulge per Worley cell with creases between
+// cells, i.e. cauliflower rather than the cones of raw F1. Mean ~0.64, sd ~0.27 per octave.
+float bulge(float w) { float f = (1.0 - w) * (1.0 / 0.75); return sqrt(max(1.0 - f * f, 0.0)); }
+
+// Signed distance (m, positive inside) to the undisplaced cell envelope.
+float envelopeAt(vec3 p) {
+  vec3 uvw = vec3((p.x + uVolInfo.x) / (2.0 * uVolInfo.x), (p.z + uVolInfo.x) / (2.0 * uVolInfo.x), (p.y - uVolInfo.y) / uVolInfo.z);
+  if (any(lessThan(uvw, vec3(0.0))) || any(greaterThan(uvw, vec3(1.0)))) return -uVolInfo.w;
+  return (textureLod(uEnv, uvw, 0.0).r - 0.5) * 2.0 * uVolInfo.w;
+}
+
+// Density (0..1) at p (m = coverAt(p.xz)). fine = add the small billow octave. `skip` receives a distance the caller
+// may advance when the envelope is far; `geo` receives (depth below the crown, depth inside the envelope, height above
+// the base, depth inside the displaced surface), used for the ambient term.
+float cloudDensity(vec3 p, vec4 m, bool fine, out float skip, out vec4 geo) {
+  float h = p.y - baseAt(p.xz);
+  float amp = uShape.x;
+  float reach = 1.5 * amp + 0.6 * uShape.y + 6.0;           // how far the billows may push the surface outwards
+  skip = 0.0;
+  geo = vec4(0.0);
+  float dOut = m.a * uCoverInfo.z - m.g * uCoverInfo.y;     // signed 2D distance outside the footprints
+  if (dOut > reach) { skip = dOut - reach; return 0.0; }
+  if (h < -8.0) { skip = -h - 8.0; return 0.0; }
+  float env = min(envelopeAt(p), h);
+  if (env < -reach) { skip = 0.85 * (-env - reach); return 0.0; }
+  // crown depth: how far below the local top of the column the sample is (the column top is in the coverage map)
+  float H = m.r * (uCloud.y - uCloud.x);
+  geo = vec4(max(H - h, 0.0), max(env, 0.0), h, 0.0);
+  vec4 ns = textureLod(uNoiseS, p / uShapeScale.x, 0.0);
+  float bil = uShapeW.x * bulge(ns.g) + uShapeW.y * bulge(ns.b) + uShapeW.z * bulge(ns.a);
+  // slow lumps (1 km cells) break the symmetry of the ellipsoids
+  float lump = textureLod(uNoiseS, p * (1.0 / 5200.0) + vec3(0.37, 0.11, 0.73), 0.0).g;
+  float flatB = smoothstep(0.0, 160.0, h);                  // billows fade out toward the flat base
+  // small cells (thin columns) get proportionally smaller billows
+  float size = clamp(H / 600.0, 0.35, 1.0);
+  float s = env + (amp * 2.8 * (bil - 0.64) + amp * 0.9 * (lump - 0.48)) * size * mix(0.1, 1.0, flatB);
+  if (fine) {
+    vec3 nd = textureLod(uNoiseD, p / uShapeScale.y, 0.0).rgb;
+    s += uShape.y * 2.0 * (0.6 * bulge(nd.r) + 0.4 * bulge(nd.g) - 0.64) * mix(0.35, 1.0, flatB);
   }
-  return d;
+  geo.w = s;
+  return clamp(s / uShape.z, 0.0, 1.0);
 }
 
-const float CLOUD_SIGMA = 0.028;   // extinction of density 1, per metre
-
-float lightTau(vec3 p, vec4 cin) {
-  float tau = 0.0;
-  float s = 30.0, acc = 0.0;
-  for (int i = 0; i < 6; i++) {
-    float mid = acc + s * 0.5;
-    vec3 q = p + uCloudSunDir * mid;
-    vec4 c;
-    float cv = cloudCover(q, c);
-    if (cv > 0.02) tau += cloudDensity(q, c, i < 3) * s;
-    acc += s; s *= 2.0;
+// Optical depth toward the sun: geometric steps starting small, so billow-scale self-shadowing is resolved.
+float lightTau(vec3 p) {
+  float tau = 0.0, s = uShapeScale.w, acc = 0.0, sk;
+  vec4 g;
+  int n = int(uStep.w);
+  for (int i = 0; i < 9; i++) {
+    if (i >= n) break;
+    vec3 q = p + uCloudSunDir * (acc + 0.5 * s);
+    vec4 m = coverAt(q.xz);
+    if (m.a < 0.999) tau += cloudDensity(q, m, i < 3, sk, g) * s;
+    acc += s; s *= 1.9;
   }
-  // forward-scattering droplets barely attenuate the sun: the effective optical depth is (1-g) * tau
-  return tau * CLOUD_SIGMA * uWeather.x * 0.11;
+  return tau * uShape.w * uWeather.x;
 }
 
-vec4 marchClouds(vec3 ro, vec3 rd, vec3 skyHaze, float jitter) {
-  // returns rgb = radiance (already attenuated by transmittance), a = remaining transmittance
-  if (uCloud.w < 0.5 || rd.y < 0.0015) return vec4(0.0, 0.0, 0.0, 1.0);
-  float t0 = max((uCloud.x - ro.y) / rd.y, 0.0);
-  float t1 = min((uCloud.y - ro.y) / rd.y, 60000.0);
+// returns rgb = radiance (already attenuated), a = transmittance; tHit = transmittance-weighted distance
+vec4 marchClouds(vec3 ro, vec3 rd, vec3 skyHaze, float jitter, out float tHit) {
+  tHit = 0.0;
+  if (uCloud.w < 0.5 || rd.y < 0.0) return vec4(0.0, 0.0, 0.0, 1.0);
+  float lo = uCloud.x - 40.0, hi = uCloud.y + 40.0;
+  if (ro.y > hi) return vec4(0.0, 0.0, 0.0, 1.0);
+  float t0 = ro.y < lo ? (lo - ro.y) / max(rd.y, 1.0e-4) : 0.0;
+  float t1 = rd.y > 1.0e-4 ? (hi - ro.y) / rd.y : 1.0e9;
+  t1 = min(t1, 60000.0);
   if (t0 >= t1) return vec4(0.0, 0.0, 0.0, 1.0);
   float mu = dot(rd, uCloudSunDir);
-  // three phase lobes (forward, isotropic, back) mean-normalised (times 4 pi) for the Wrenninge octaves
-  float phase0 = 4.0 * 3.14159265 * (0.55 * sl_hg(mu, 0.62) + 0.45 * sl_hg(mu, -0.25));
+  // dual-lobe HG (forward silver lining + a weak back lobe), normalised so an isotropic phase is 1
+  float pF = uCloudPhase.x, pB = uCloudPhase.y, wB = uCloudPhase.z;
+  vec3 sunE = uSunLight * uCloudLit.x / 3.14159265;
   vec3 L = vec3(0.0);
-  float T = 1.0;
-  float t = t0 + jitter * clamp(t0 * 0.01, 25.0, 200.0);
-  int maxIt = int(uCloud.z);
-  // humid-air cream rather than saturated orange: the sun colour is pulled 40% toward grey for the clouds
-  vec3 sunE = mix(vec3(sl_luma(uSunLight)), uSunLight, 0.6) / 3.14159265;
-  for (int i = 0; i < 400; i++) {
-    if (i >= maxIt || t > t1 || T < 0.012) break;
-    float dt = clamp(t * 0.0075, 20.0, 160.0);
+  float T = 1.0, wsum = 0.0;
+  float t = t0;
+  int maxIt = int(uCloud.z), octaves = int(uCloudMs.w);
+  int fineN = 0;
+  bool first = true;
+  for (int i = 0; i < 600; i++) {
+    if (t > t1 || T < 0.008 || fineN >= maxIt) break;
     vec3 p = ro + rd * t;
-    vec4 c;
-    float cv = cloudCover(p, c);
-    if (cv < 0.02) { t += dt * 3.0; continue; }
-    float d = cloudDensity(p, c, true) * uWeather.x;
-    if (d < 0.004) { t += dt; continue; }
-    float sigma = d * CLOUD_SIGMA;
-    float tauL = lightTau(p, c);
-    // Wrenninge multiple-scattering octaves
-    float ms = 0.0, a = 1.0, b = 1.0, cc = 1.0, norm = 0.0;
-    for (int o = 0; o < 3; o++) {
-      float ph = mix(1.0, phase0, cc);
-      ms += b * exp(-tauL * a) * ph;
-      norm += b;
-      a *= 0.5; b *= 0.5; cc *= 0.6;
+    vec4 m = coverAt(p.xz);
+    float dt = clamp(t * uStep.x, uStep.y, uStep.z);
+    float skip;
+    vec4 geo;
+    float d = cloudDensity(p, m, true, skip, geo);
+    if (skip > 0.0) { t += max(skip, dt); continue; }
+    if (first) { t += jitter * dt; first = false; continue; }   // decorrelate the first in-cloud sample per pixel
+    fineN++;
+    if (d > 0.002) {
+      float sigma = d * uShape.w * uWeather.x;
+      float tauL = lightTau(p);
+      float ms = 0.0, a = 1.0, b = 1.0, c = 1.0;
+      for (int o = 0; o < 5; o++) {
+        if (o >= octaves) break;
+        float ph = 4.0 * 3.14159265 * mix(sl_hg(mu, pF * c), sl_hg(mu, pB * c), wB);
+        ms += b * exp(-tauL * a) * ph;
+        a *= uCloudMs.x; b *= uCloudMs.y; c *= uCloudMs.z;
+      }
+      // ambient: near the crown the sample sees the whole sky, on the flanks half sky and half ground, near the flat
+      // base mostly the ground; samples deep inside receive less (skylight diffuses in over uCloudLit.w metres)
+      float up = clamp(geo.z / max(geo.z + geo.x, 1.0), 0.0, 1.0);           // 0 at the base, 1 at the crown
+      float skyVis = mix(0.12, 1.0, smoothstep(0.0, 0.9, up));
+      float gndVis = mix(1.0, 0.1, smoothstep(0.0, 0.6, up));
+      float diff = exp(-max(geo.w, 0.0) / uCloudLit.w);
+      vec3 amb = (uAmbTop * uCloudLit.y * skyVis + uAmbBottom * uCloudLit.z * gndVis + sunE * (uCloudPhase.w * mix(0.25, 1.0, up))) * mix(0.3, 1.0, diff);
+      vec3 S = sunE * ms + amb;
+      float Ts = exp(-sigma * dt);
+      float wgt = T * (1.0 - Ts);
+      L += wgt * S;
+      wsum += wgt; tHit += wgt * t;
+      T *= Ts;
     }
-    ms /= norm;
-    float hN = clamp((p.y - uCloud.x) / max((uCloud.y - uCloud.x) * c.g, 1.0), 0.0, 1.0);
-    // "powder": inner cores are darker than thin edges seen against the sun
-    float powder = 1.0 - 0.55 * exp(-d * 2.2);
-    vec3 amb = mix(uAmbBottom, uAmbTop, smoothstep(0.0, 0.85, hN));
-    // wrap term: multiple scattering lets light leak around towers, so shaded flanks still glow softly
-    float wrap = 0.30 * (1.0 - hN * 0.35);
-    vec3 S = sunE * (ms + wrap * 0.75) * mix(1.0, powder, 0.35) + amb;
-    float hz = 1.0 - exp(-t * uWeather.z);
-    S = mix(S, skyHaze, hz);
-    float Ts = exp(-sigma * dt);
-    L += T * S * (1.0 - Ts);
-    T *= Ts;
     t += dt;
   }
+  // the march stops once the cloud is nearly opaque: treat it as opaque, or bright stars would shine through at night
+  if (T < 0.01) T = 0.0;
+  if (wsum > 0.0) {
+    tHit /= wsum;
+    // aerial perspective between the camera and the cloud: fade toward the sky behind it
+    float hz = 1.0 - exp(-tHit * uWeather.z);
+    L = mix(L, skyHaze * (1.0 - T), hz);
+  }
   return vec4(L, T);
+}
+
+// ------------------------------------------------------------------ sky look
+// The reference is a graded photograph: its clear sky is a deep, nearly red-free cerulean above ~15 deg and a pale
+// teal-grey haze band below ~10 deg, a steeper split than any stratified single-scatter atmosphere produces. The
+// in-scattered light keeps its physical luminance (so noon, dusk and night still scale correctly); only its chroma is
+// deepened aloft, in log space so no channel goes negative.
+vec3 skyLook(vec3 c, float y) {
+  float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  if (lum < 1.0e-6 || uLook.x <= 0.0) return c;
+  float k = uLook.x * smoothstep(uLook.y, uLook.z, y);
+  vec3 r = pow(max(c / lum, vec3(1.0e-4)), vec3(1.0 + k));
+  return r * (lum / max(dot(r, vec3(0.2126, 0.7152, 0.0722)), 1.0e-6));
 }
 
 // ------------------------------------------------------------------ stars (night)
@@ -207,29 +296,32 @@ void main() {
   if (rd.y >= 0.0 || uBelow < 0.5) {
     vec3 rdA = rd.y >= 0.0 ? rd : normalize(vec3(rd.x, 0.0, rd.z) + vec3(0.0, 1.0e-3, 0.0));
     col = atm_inscatter(camAlt, rdA, uSunDir, uE0, uMsGain, rd.y >= 0.0 ? 36 : 12, viewT);
-    col *= mix(vec3(1.0), uHorizonTint, exp(-max(rdA.y, 0.0) * 7.0));
-    // ambient amount reaching clouds/cirrus comes from the same sky
-    vec3 skyAmb = uAmbTop;
+    col = skyLook(col, rdA.y);
+    col *= mix(vec3(1.0), uHorizonTint, exp(-max(rdA.y, 0.0) * uLook.w));
     col += uSkyFloor * (0.25 + 0.75 * exp(-max(rdA.y, 0.0) * 3.0));
     col += stars(rdA) * viewT;
-    vec4 ci = cirrus(ro, rdA, skyAmb);
+    vec4 ci = cirrus(ro, rdA, uAmbTop);
     col = col * (1.0 - ci.a) + ci.rgb;
     float jitter = sl_ign(gl_FragCoord.xy + vec2(float(uFace) * 37.0, 0.0), 0.0);
-    vec4 cu = marchClouds(ro, rdA, col, jitter);
+    float tHit;
+    vec4 cu = marchClouds(ro, rdA, col, jitter, tHit);
     col = col * cu.a + cu.rgb;
     cloudAlpha = clamp(1.0 - cu.a + ci.a * 0.4, 0.0, 1.0);
   } else {
     vec3 rdH = normalize(vec3(rd.x, 0.0, rd.z) + vec3(0.0, 1.0e-3, 0.0));
     vec3 hor = atm_inscatter(camAlt, rdH, uSunDir, uE0, uMsGain, 12, viewT);
+    hor = skyLook(hor, rdH.y) * mix(vec3(1.0), uHorizonTint, exp(-max(rdH.y, 0.0) * uLook.w));
     col = mix(hor, uGround, smoothstep(0.0, -0.12, rd.y));
   }
   if (uDebug > 0.5 && rd.y > 0.01) {
-    float tt = (uCloud.x + 400.0 - ro.y) / rd.y;
+    float tt = (uCloud.x + 300.0 - ro.y) / rd.y;
     vec3 pp = ro + rd * tt;
-    vec4 cc; float cv = cloudCover(pp, cc);
-    if (uDebug < 1.5) col = vec3(textureLod(uNoiseS, pp / 2600.0, 0.0).rgb);
-    else if (uDebug < 2.5) col = vec3(cv, cc.g, cc.b);
-    else col = vec3(cloudDensity(pp, cc, true));
+    vec4 cc = coverAt(pp.xz);
+    float sk; vec4 g;
+    if (uDebug < 1.5) col = vec3(textureLod(uNoiseS, pp / uShapeScale.x, 0.0).gba);
+    else if (uDebug < 2.5) col = vec3(cc.r * 4.0, cc.g, cc.a);
+    else if (uDebug < 3.5) col = vec3(cloudDensity(pp, cc, true, sk, g));
+    else col = vec3(envelopeAt(pp) / uVolInfo.w * 0.5 + 0.5);
   }
   gl_FragColor = vec4(col, cloudAlpha);
 }

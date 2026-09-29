@@ -321,7 +321,7 @@ export class EnvironmentModule implements Module {
 
 /** Map a LightingPreset to the sky bake parameters (see comments for the tuning intent). */
 /** Sky look knobs (tuned against research/palette.json); the sandbox can override them from the URL. */
-export const SKY_TUNE = { solar: 15.39, aerosol: 13.8, ms: 1.0, warmth: 0.5, farCap: 30000, rayleighR: 0.5625e-6, rayleighG: 16.5e-6, rayleighB: 44.7e-6, hazeR: 0.74, hazeG: 0.97, hazeB: 0.90 };
+export const SKY_TUNE = { solar: 10.5, aerosol: 25, ms: 0.22, warmth: 0.4, farCap: 30000, rayleighR: 0.5625e-6, rayleighG: 9.9e-6, rayleighB: 25.2e-6, hazeR: 2.85, hazeG: 3.45, hazeB: 3.5 };
 
 export function presetToSky(p: LightingPreset): SkyParams {
   const sunDir = p.sun.dir.clone().normalize();
@@ -352,7 +352,7 @@ export function presetToSky(p: LightingPreset): SkyParams {
     betaR: new THREE.Vector3(SKY_TUNE.rayleighR, SKY_TUNE.rayleighG, SKY_TUNE.rayleighB),
     ambTop, ambBottom,
     cloudDensity: 1.0, cloudCoarse: 0.85, hazePerMetre: 2.2e-5,
-    cirrus: 1.0, cirrusAngle: 0.6,
+    cirrus: 1.0, cirrusAngle: 1.31,
     stars: night,
     skyFloor: new THREE.Color(0.010, 0.020, 0.046).multiplyScalar(night),
     ground,
