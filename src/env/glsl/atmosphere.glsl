@@ -11,7 +11,8 @@
 const float ATM_RE = 6360.0e3;          // ground radius
 const float ATM_RA = 6460.0e3;          // top of atmosphere
 const float ATM_HR = 8000.0;            // Rayleigh scale height
-const float ATM_HM = 1200.0;            // Mie / aerosol scale height
+uniform float uAeroH;         // aerosol scale height (m): a shallow humid marine layer keeps the upper sky clean and saturated
+uniform vec2  uAeroPhase;     // x = weight of the sharp forward aureole lobe, y = g of the broad humid-haze lobe
 uniform float uFar;           // cap (m) on the view-ray length: the far haze is handled by terrain/ocean fog, and a shorter cap keeps the horizon from glowing
 uniform float uWarm;          // 0 = sun transmittance colour ignored for scattering (white haze), 1 = physical
 uniform vec3 uBetaR;          // Rayleigh scattering coefficients (per m); art-directed toward a saturated cerulean
@@ -45,7 +46,7 @@ vec3 atm_sunTau(vec3 p, vec3 sunDir, int nSteps) {
     float t = (float(i) + 0.5) * dt;
     float h = max(length(p + sunDir * t) - ATM_RE, 0.0);
     float dR = exp(-h / ATM_HR) * uAtmo.x;
-    float dM = exp(-h / ATM_HM) * uAtmo.y;
+    float dM = exp(-h / uAeroH) * uAtmo.y;
     float dO = max(0.0, 1.0 - abs(h - 25000.0) / 15000.0) * uAtmo.w;
     tau += (ATM_BETA_R * dR + ATM_BETA_M_EXT * dM + ATM_BETA_OZ * dO) * dt;
   }
@@ -60,7 +61,7 @@ float atm_phaseCS(float mu, float g) {
   return 3.0 / (8.0 * 3.14159265) * ((1.0 - g2) * (1.0 + mu * mu)) / ((2.0 + g2) * pow(max(1.0 + g2 - 2.0 * g * mu, 1e-3), 1.5));
 }
 // humid coastal aerosol: a sharp forward aureole plus a broad whitening lobe
-float atm_phaseM(float mu, float g) { return 0.32 * atm_phaseCS(mu, g) + 0.68 * atm_phaseCS(mu, 0.2); }
+float atm_phaseM(float mu, float g) { return uAeroPhase.x * atm_phaseCS(mu, g) + (1.0 - uAeroPhase.x) * atm_phaseCS(mu, uAeroPhase.y); }
 
 // In-scattered radiance along the ray (camera at altitude camAlt metres) up to tMax (or the top of the atmosphere).
 // E0 = extraterrestrial sun irradiance (linear rgb, arbitrary scene scale). `viewT` receives the view transmittance.
@@ -85,7 +86,7 @@ vec3 atm_inscatter(float camAlt, vec3 rd, vec3 sunDir, vec3 E0, float msGain, in
     vec3 p = ro + rd * t;
     float h = max(length(p) - ATM_RE, 0.0);
     float dR = exp(-h / ATM_HR) * uAtmo.x;
-    float dM = exp(-h / ATM_HM) * uAtmo.y;
+    float dM = exp(-h / uAeroH) * uAtmo.y;
     float dO = max(0.0, 1.0 - abs(h - 25000.0) / 15000.0) * uAtmo.w;
     vec3 ext = ATM_BETA_R * dR + ATM_BETA_M_EXT * dM + ATM_BETA_OZ * dO;
     vec3 tauStep = ext * dt;
