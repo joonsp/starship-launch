@@ -96,11 +96,40 @@ function callSite(r: Recipe): string {
   }`;
 }
 
+/**
+ * The launch cloud as part of the vehicle's environment light.
+ *
+ * Core's PMREM environment is the open sky over bare ground. At T+7 s the stack stands inside the launch cloud:
+ * the banks on both sides hide much of the bright horizon sky from the hull, and their sunlit faces send warm
+ * light back. Without this the frost's shaded side is lit by an unobstructed blue horizon (2-3x brighter and
+ * much bluer than in the photo) and the warm sun barely shows against it.
+ *   skyDiffuse   share of the sky's diffuse light that reaches sideways / downward normals (up-facing normals
+ *                still see the open zenith)
+ *   skySpecular  share of the sky's specular reflection for the same normals
+ *   steamBounce  warm bounce from the sunlit steam: irradiance = pi x steamBounce x sun (the sunlit bank radiance
+ *                ~ 0.35 x sun, seen over ~9 % of the cosine-weighted hemisphere), strongest for downward normals
+ * Live: edit `materials.env` and call `applyEnv()`. Not applied in the thermal view.
+ */
+export const VEHICLE_ENV = { skyDiffuse: 0.45, skySpecular: 0.7, steamBounce: 0.03 };
+
+const LAUNCH_CLOUD_ENV = /* glsl */ `
+  if (uViewMode != VIEW_THERMAL) {
+    vec3 vhWN = normalize((vec4(geometryNormal, 0.0) * viewMatrix).xyz);   // world-space normal
+    float vhLow = 1.0 - smoothstep(-0.2, 0.9, vhWN.y);                      // 1 sideways / down, 0 up
+    iblIrradiance *= mix(1.0, uVhEnv.x, vhLow);
+    radiance *= mix(1.0, uVhEnv.y, vhLow);
+    irradiance += uVhSun * (3.14159265 * uVhEnv.z * (0.5 - 0.5 * vhWN.y));
+  }`;
+
 export class VehicleMaterials {
   readonly byRole = {} as Record<VehicleMaterialRole, THREE.MeshPhysicalMaterial>;
+  /** Launch-cloud environment knobs (see VEHICLE_ENV); call applyEnv() after editing. */
+  readonly env = { ...VEHICLE_ENV };
+  private readonly envUniform = new THREE.Uniform(new THREE.Vector3());
   private oct = OCTAVES.high;
 
   constructor(private globals: Globals, quality: QualitySettings) {
+    this.applyEnv();
     this.oct = OCTAVES[quality.id];
     for (const role of Object.keys(RECIPES) as VehicleMaterialRole[]) this.byRole[role] = this.make(role);
   }
@@ -118,6 +147,10 @@ export class VehicleMaterials {
       case 'engine_dark': return this.byRole.engineDark;
       default: return this.byRole.boosterDark;
     }
+  }
+
+  applyEnv(): void {
+    this.envUniform.value.set(this.env.skyDiffuse, this.env.skySpecular, this.env.steamBounce);
   }
 
   setQuality(q: QualitySettings): void {
@@ -149,12 +182,15 @@ export class VehicleMaterials {
     const self = this;
     const shaderSrc = commonGlsl + '\n' + r.glsl;
     m.onBeforeCompile = (shader) => {
+      shader.uniforms.uVhEnv = self.envUniform;
+      shader.uniforms.uVhSun = self.globals.uSunColor;
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', '#include <common>\nvarying vec3 vSlObjNrm;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vSlObjNrm = objectNormal;');
-      const header = `${specDefines()}\n#define VH_OCT ${self.oct}\n${r.extraDefines ?? ''}\n`;
+      const header = `${specDefines()}\n#define VH_OCT ${self.oct}\n${r.extraDefines ?? ''}\nuniform vec3 uVhEnv;\nuniform vec3 uVhSun;\n`;
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', `#include <common>\nvarying vec3 vSlObjNrm;\n${header}${shaderSrc}`)
+        .replace('#include <lights_fragment_end>', `${LAUNCH_CLOUD_ENV}\n#include <lights_fragment_end>`)
         .replace('#include <color_fragment>', `#include <color_fragment>\n${callSite(r)}`)
         .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\n  if (vhRough >= 0.0) roughnessFactor = vhRough;`)
         .replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>\n  if (vhMetal >= 0.0) metalnessFactor = vhMetal;`)

@@ -129,15 +129,15 @@ export interface PhotoLook {
 }
 
 export const DEFAULT_PHOTO_LOOK: PhotoLook = {
-  blackLift: 0.05,
-  shadowTint: [-0.004, 0.002, 0.012],
-  highlightTint: [0.014, 0.005, -0.02],
-  blueSat: 0.18,
-  orangeSat: 0.1,
+  blackLift: 0.035,
+  shadowTint: [-0.01, 0.004, 0.018],
+  highlightTint: [0.018, 0.006, -0.026],
+  blueSat: 0.2,
+  orangeSat: 0.14,
   globalSat: 0.05,
-  richness: 0.4,
+  richness: 0.45,
   flame: 0.7,
-  curve: 0.2,
+  curve: 0.24,
 };
 
 function smoothstep(a: number, b: number, x: number): number {
@@ -203,6 +203,15 @@ export function applyPhotoLook(rgb: readonly [number, number, number], p: PhotoL
  * inputColorSpace (sRGB) feeds it. Cost: 33^3 = 36k evaluations, about 5 ms, once.
  */
 export function createPhotoLookLUT(size = 33, look: PhotoLook = DEFAULT_PHOTO_LOOK): LookupTexture {
+  const data = buildLookData(size, look);
+  const lut = new LookupTexture(data as unknown as ArrayBufferView, size);
+  lut.type = THREE.HalfFloatType;
+  lut.name = 'post.photoLook';
+  return lut;
+}
+
+/** The half-float RGBA data of a look LUT (size^3 texels, r fastest). */
+export function buildLookData(size: number, look: PhotoLook): Uint16Array {
   const data = new Uint16Array(size * size * size * 4);
   const s = 1 / (size - 1);
   const tmp: [number, number, number] = [0, 0, 0];
@@ -216,8 +225,13 @@ export function createPhotoLookLUT(size = 33, look: PhotoLook = DEFAULT_PHOTO_LO
       }
     }
   }
-  const lut = new LookupTexture(data as unknown as ArrayBufferView, size);
-  lut.type = THREE.HalfFloatType;
-  lut.name = 'post.photoLook';
-  return lut;
+  return data;
+}
+
+/** Rewrite an existing look LUT in place (same size: no shader recompile, one texture upload). */
+export function writeLookLUT(lut: LookupTexture, look: PhotoLook): void {
+  const size = lut.image.width;
+  const dst = lut.image.data as unknown as Uint16Array;
+  dst.set(buildLookData(size, look));
+  lut.needsUpdate = true;
 }

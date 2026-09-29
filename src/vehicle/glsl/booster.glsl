@@ -81,8 +81,11 @@ void vhBooster(vec3 p, vec3 nObj,
   float crystal2 = mix(0.5, vhNoise(p * 130.0 + 3.7), vhDetail(0.017));
 
   // ---- albedo: bright crests, darker troughs between the clumps
-  vec3 frostCol = vec3(0.82, 0.86, 0.92) * (0.62 + 0.42 * smoothstep(0.10, 0.85, crust) + 0.10 * (macro - 0.5) + 0.10 * (crystal - 0.5));
-  frostCol = mix(frostCol, vec3(0.72, 0.80, 0.92), (1.0 - lower) * 0.35);
+  // Frost is spectrally flat (ice crystals scatter all wavelengths alike); its colour in the photo is the light's:
+  // warm cream in the low sun, blue-grey in skylight. A faint warm cast from the pad dust and soot the deluge
+  // steam deposits on it; the thin, patchy frost of the CH4 tank lets the grey steel through.
+  vec3 frostCol = vec3(0.86, 0.85, 0.82) * (0.62 + 0.42 * smoothstep(0.10, 0.85, crust) + 0.10 * (macro - 0.5) + 0.10 * (crystal - 0.5));
+  frostCol = mix(frostCol, vec3(0.74, 0.75, 0.76), (1.0 - lower) * 0.35);
   float wear = vhFbm(vec3(p.x * 1.7, p.y * 0.30, p.z * 1.7), 0.6);
   vec3 steelCol = vec3(0.50, 0.52, 0.56) * (0.72 + 0.5 * wear);
   // hot-stage heat stain: dark, gold/blue tinted
