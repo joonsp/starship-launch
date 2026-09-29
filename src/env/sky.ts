@@ -7,8 +7,8 @@ import bakeFrag from './glsl/sky_bake.frag.glsl?raw';
 import domeVert from './glsl/sky_dome.vert.glsl?raw';
 import domeFrag from './glsl/sky_dome.frag.glsl?raw';
 import {
-  CIRRUS_PATCHES, CLOUD_BASE, CLOUD_TOP, CONTRAIL, COVER_DIN, COVER_DOUT, COVER_EXTENT, VOL_DY, VOL_EXTENT, VOL_LAYERS, VOL_RANGE, VOL_Y0,
-  buildEnvelopeVolume,
+  CIRRUS_PATCHES, CLOUD_BASE, CLOUD_BELOW, CLOUD_TOP, CONTRAIL, COVER_DIN, COVER_DOUT, COVER_EXTENT, VOL_DY, VOL_EXTENT, VOL_LAYERS, VOL_RANGE,
+  VOL_Y0, buildEnvelopeVolume,
 } from './cloud-layout.ts';
 
 /**
@@ -37,8 +37,22 @@ export const SKY_LOOK = {
   billow: 170, fineBillow: 16,
   /** Weights of the large, medium and small billow octaves (Worley 4/8/16 cells per shape tile). */
   billowW0: 0.35, billowW1: 0.4, billowW2: 0.25,
-  /** Edge softness (m): the displaced surface ramps to full density over this distance. */
-  edge: 8,
+  /** Edge width (m): behind the displaced surface the density ramps in over this distance, on a dense tower (crowns
+   *  are crisper, flanks softer) and on a fully ragged fragment (cloud-layout.ts CloudCell.rag). */
+  edge: 14, edgeRag: 32,
+  /** Fringe erosion depth (m) by the smallest detail cells: torn, wispy edges (dense tower, ragged fragment). */
+  erode: 16, erodeRag: 110,
+  /** Soft base: the density fades in over this height (m), centred on the condensation level (dense, ragged cell). */
+  baseSoft: 60, baseSoftRag: 150,
+  /** Billow strength kept on the flanks just above the base (1 = as strong as on the crown). */
+  flank: 0.55,
+  /** Density of a fully ragged fragment relative to a dense tower, and how deep (m) it is torn apart at ~0.5 km scale. */
+  thin: 0.4, breakup: 220,
+  /** Long-range cloud-on-cloud shadow toward the true sun: optical-depth gain (relative to the cloud interior, the
+   *  envelope is undisplaced and coarsely sampled) and reach (m). At sunrise a 1 km tower shadows ~10 km downsun. */
+  farShadow: 0.3, farReach: 16000,
+  /** Sunlight re-scattered into a cloud shadow by the sunlit cloud field and haze around it (fraction of the sun). */
+  shadowFill: 0.05,
   /** Extinction (1/m) of the cloud interior (real cumulus: 0.05-0.1). */
   sigma: 0.06,
   /** Tile sizes (m) of the shape (Worley 4/8/16 cells) and detail (3/6/12 cells) noise, and the base wander (m). */
@@ -133,6 +147,7 @@ export class SkyBaker {
         uCoverInfo: { value: new THREE.Vector4(COVER_EXTENT, COVER_DIN, COVER_DOUT, (2 * COVER_EXTENT) / coverRes) },
         uShape: { value: new THREE.Vector4() }, uShapeScale: { value: new THREE.Vector4() }, uStep: { value: new THREE.Vector4() },
         uShapeW: { value: new THREE.Vector3() },
+        uEdge: { value: new THREE.Vector4() }, uBaseShape: { value: new THREE.Vector4() }, uCloudX: { value: new THREE.Vector4() }, uCloudX2: { value: new THREE.Vector4() },
         uCloudLit: { value: new THREE.Vector4() }, uCloudPhase: { value: new THREE.Vector4() }, uCloudMs: { value: new THREE.Vector4() },
         uEnv: { value: this.envelope }, uVolInfo: { value: new THREE.Vector4(VOL_EXTENT, VOL_Y0, VOL_LAYERS * VOL_DY, VOL_RANGE) },
         uCirrusLit: { value: new THREE.Vector4() },
@@ -174,7 +189,11 @@ export class SkyBaker {
     u.uAeroH.value = L.aeroH; u.uAeroPhase.value.set(L.aeroFwd, L.aeroBroadG);
     // small cubes (the 128^2 environment cube) march with proportionally longer steps and fewer light samples
     const k = Math.max(1, 1024 / size);
-    u.uShape.value.set(L.billow, L.fineBillow, L.edge * Math.min(k, 3), L.sigma);
+    u.uShape.value.set(L.billow, L.fineBillow, Math.min(k, 3), L.sigma);
+    u.uEdge.value.set(L.edge, L.edgeRag, L.erode, L.erodeRag);
+    u.uBaseShape.value.set(L.baseSoft, L.baseSoftRag, CLOUD_BELOW, L.flank);
+    u.uCloudX.value.set(L.thin, L.farShadow, L.farReach, L.breakup);
+    u.uCloudX2.value.set(L.shadowFill, 0, 0, 0);
     u.uShapeScale.value.set(L.shapeTile, L.detailTile, L.baseWander, L.lightStep0);
     const wsum = L.billowW0 + L.billowW1 + L.billowW2;
     u.uShapeW.value.set(L.billowW0 / wsum, L.billowW1 / wsum, L.billowW2 / wsum);
