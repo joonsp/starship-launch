@@ -92,6 +92,7 @@ const VERT_DECL = `attribute vec4 aRoad;\nvarying vec4 vRoad;`;
 const FRAG_DECL = /* glsl */`
 varying vec4 vRoad;
 uniform sampler2D uRoadNoise;
+uniform sampler2D uSteamShade;   // sun transmittance of the launch-cloud banks (steam-shadow.ts)
 `;
 
 const AT_COLOR = /* glsl */`
@@ -157,11 +158,20 @@ const AT_COLOR = /* glsl */`
   }
 `;
 
+// the launch-cloud banks shade the road from the low sun (the scene's sun light only; runs before the plume line light)
+const AT_SHADE = /* glsl */`
+  {
+    float slSteamT = texture(uSteamShade, vSlWorldPos.xz * (0.5 / 4096.0) + 0.5).r;
+    reflectedLight.directDiffuse *= slSteamT;
+    reflectedLight.directSpecular *= slSteamT;
+  }
+`;
+
 export class Roads {
   readonly mesh: THREE.Mesh | null;
   readonly material: THREE.MeshStandardMaterial;
 
-  constructor(globals: Globals, site: SiteData, noise: THREE.Texture, hazeCube: THREE.Texture) {
+  constructor(globals: Globals, site: SiteData, noise: THREE.Texture, hazeCube: THREE.Texture, steamShade: THREE.Texture) {
     const geo = buildRoadGeometry(site);
     const mat = new THREE.MeshStandardMaterial({
       color: 0xffffff, roughness: 0.92, metalness: 0, envMapIntensity: 0.3, transparent: true, depthWrite: false,
@@ -170,12 +180,14 @@ export class Roads {
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uRoadNoise = { value: noise };
       shader.uniforms.uHazeCube = { value: hazeCube };
+      shader.uniforms.uSteamShade = { value: steamShade };
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', `#include <common>\n${VERT_DECL}`)
         .replace('#include <begin_vertex>', `#include <begin_vertex>\nvRoad = aRoad;`);
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', `#include <common>\n${HAZE_DECL}\n${FRAG_DECL}`)
         .replace('#include <color_fragment>', `#include <color_fragment>\n${AT_COLOR}`)
+        .replace('#include <lights_fragment_begin>', `#include <lights_fragment_begin>\n${AT_SHADE}`)
         .replace('#include <opaque_fragment>', `${HAZE_APPLY}\n#include <opaque_fragment>`);
     };
     mat.customProgramCacheKey = () => 'env-roads-v1';

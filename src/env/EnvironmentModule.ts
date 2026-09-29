@@ -9,6 +9,7 @@ import { buildSplats, disposeSplats, type SplatSet } from './splat.ts';
 import { Terrain } from './terrain.ts';
 import { Ocean } from './ocean.ts';
 import { PlanarReflection } from './reflection.ts';
+import { SteamShadow } from './steam-shadow.ts';
 import { Roads } from './roads.ts';
 import { Buildings } from './buildings.ts';
 import { Vegetation } from './vegetation.ts';
@@ -64,6 +65,7 @@ export class EnvironmentModule implements Module {
   buildings?: Buildings;
   vegetation?: Vegetation;
   private refl = new PlanarReflection();
+  private steamShadow = new SteamShadow();
   private reflCamM = new THREE.Matrix4();
   private reflProj = new THREE.Matrix4();
   private reflDirty = true;
@@ -105,7 +107,7 @@ export class EnvironmentModule implements Module {
     if (this.has('terrain') || this.has('ocean')) {
       this.splats = buildSplats(this.site, SPLAT_RES[ctx.quality.id]);
       const sky = this.cube.texture;
-      this.terrain = new Terrain(ctx.globals, this.site, this.splats, this.noise2D, this.cellNoise, this.waveSlopes, sky, this.hazeCube.texture);
+      this.terrain = new Terrain(ctx.globals, this.site, this.splats, this.noise2D, this.cellNoise, this.waveSlopes, sky, this.hazeCube.texture, this.steamShadow.texture);
       if (this.has('terrain')) this.root.add(this.terrain.mesh);
       if (this.has('terrain')) {
         this.vegetation = new Vegetation(ctx.globals);
@@ -116,12 +118,13 @@ export class EnvironmentModule implements Module {
       if (this.has('ocean')) this.root.add(this.ocean.mesh);
     }
     if (this.has('osm')) {
-      this.roads = new Roads(ctx.globals, this.site, this.noise2D, this.hazeCube.texture);
+      this.roads = new Roads(ctx.globals, this.site, this.noise2D, this.hazeCube.texture, this.steamShadow.texture);
       if (this.roads.mesh) this.root.add(this.roads.mesh);
       this.buildings = new Buildings(ctx.globals, this.site);
       this.root.add(this.buildings.group);
     }
     this.applyBounce(ctx.preset);
+    this.steamShadow.update(ctx.preset.sun.dir);
     this.reflDirty = true;
   }
 
@@ -147,6 +150,7 @@ export class EnvironmentModule implements Module {
     this.bakeSkyNow();
     this.applySkyUniforms();
     this.applyBounce(p);
+    this.steamShadow.update(p.sun.dir);
     this.reflDirty = true;
   }
 
@@ -208,7 +212,7 @@ export class EnvironmentModule implements Module {
   dispose(): void {
     this.ctx.scene.remove(this.root);
     this.baker.dispose();
-    this.terrain?.dispose(); this.ocean?.dispose(); this.roads?.dispose(); this.buildings?.dispose(); this.vegetation?.dispose(); this.refl.dispose();
+    this.terrain?.dispose(); this.ocean?.dispose(); this.roads?.dispose(); this.buildings?.dispose(); this.vegetation?.dispose(); this.refl.dispose(); this.steamShadow.dispose();
     if (this.splats) disposeSplats(this.splats);
     this.noise2D.dispose(); this.cellNoise.dispose(); this.waveSlopes.dispose();
     this.cube.dispose(); this.envCube.dispose(); this.hazeCube.dispose();
