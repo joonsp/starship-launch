@@ -66,7 +66,11 @@ export class VolumeModule implements Module {
   private bakedFireTau = 0;
   private bakedRes = '';
   private driftT = 0;
-  private lastSig = '';
+  /** Numeric signature of everything that changes the image without an event (lights, view mode, fog, params). */
+  private readonly paramKeys = Object.keys(DEFAULT_PARAMS) as (keyof VolumeParams)[];
+  private sig = new Float64Array(0);
+  private sigN = 0;
+  private readonly fireKey = [NaN, NaN];
   private offs: (() => void)[] = [];
   private readonly driftOffset = new THREE.Vector3();
   private readonly growth = new THREE.Vector3(1, 1, 1);
@@ -86,6 +90,8 @@ export class VolumeModule implements Module {
     this.puffs = buildPuffs(this.frame, { padYaw: PAD_YAW });
     this.baker = new VolumeBaker(ctx.renderer, a.volumeBounds);
     this.pass.attach(ctx, this.baker);
+    // pad-local +x (the flame-trench axis) in world xz: the thermal view's exhaust wall jets run along it
+    (this.pass.shared.uTrenchAxis.value as THREE.Vector2).set(Math.cos(PAD_YAW), -Math.sin(PAD_YAW));
 
     // hotspots: steam on the east bank, fireball at the deflector
     const fires = fireSources(this.frame, PAD_YAW).slice(0, FIRE_SPECS.length);
@@ -164,14 +170,8 @@ export class VolumeModule implements Module {
         Math.abs(p.fireTauScale - this.bakedFireTau) > 1e-6) {
       if (this.jobKind !== 'light') this.requestRebake('light');
     }
-    // any lighting/view change resets the accumulation
-    // (the plume light flickers slightly in drift mode: the drift EMA absorbs that, so it is left out
-    //  of the signature while drifting; otherwise every frame would restart the accumulation)
-    const drifting = g.uDrift.value > 0;
-    const col = (c: THREE.Color) => `${c.r.toFixed(4)},${c.g.toFixed(4)},${c.b.toFixed(4)}`;
-    const sig = [col(g.uSunColor.value), col(g.uSkyAmbient.value), col(g.uGroundAmbient.value), drifting ? '' : col(g.uPlumeLight.value),
-      g.uViewMode.value, drifting ? 1 : 0, col(g.uFogColor.value), g.uFogDensity.value, JSON.stringify(p)].join('|');
-    if (sig !== this.lastSig) { this.lastSig = sig; this.pass.resetAccumulation(); }
+    // any lighting/view change resets the accumulation (allocation-free numeric signature, compared in place)
+    if (this.signatureChanged()) this.pass.resetAccumulation();
 
     // time-sliced rebakes: a few chunks per frame; textures swap when a job completes
     if (!this.job && this.pending.size) {
@@ -188,9 +188,13 @@ export class VolumeModule implements Module {
     }
 
     // fire light colour: blackbody at params.fireLightKelvin x gain (irradiance units of the bake), scaled
-    // like the plume light by the preset (night 1.3, noon 0.55)
-    blackbodyColor(p.fireLightKelvin, this.fireColor).multiplyScalar(p.fireLightGain * 1.4 * ctx.preset.plumeLightScale);
-    this.pass.setFireLight(this.fireColor, this.fireCentre);
+    // like the plume light by the preset (night 1.3, noon 0.55); recomputed only when one of those changes
+    const fireGain = p.fireLightGain * 1.4 * ctx.preset.plumeLightScale;
+    if (p.fireLightKelvin !== this.fireKey[0] || fireGain !== this.fireKey[1]) {
+      this.fireKey[0] = p.fireLightKelvin; this.fireKey[1] = fireGain;
+      blackbodyColor(p.fireLightKelvin, this.fireColor).multiplyScalar(fireGain);
+      this.pass.setFireLight(this.fireColor, this.fireCentre);
+    }
 
     // drift: slow advection + billow growth about the mount; frozen when uDrift = 0
     // (turning drift off returns to the photo-matched frozen state: a still must match the photo)
@@ -201,6 +205,43 @@ export class VolumeModule implements Module {
     const gr = p.growth * (1 - Math.exp(-dtT / 240));
     this.growth.set(1 + gr, 1 + gr * 1.3, 1 + gr);
     this.pass.setDrift(this.driftOffset, this.growth);
+  }
+
+  /**
+   * Did anything that changes the image without an event change since the last tick? Compares the light colours,
+   * view mode, drift state, fog and every numeric param in place (no strings, no allocation per tick; the UX
+   * review measured the old JSON.stringify signature). Colours use a 1e-4 tolerance, as the old 4-digit strings did.
+   * The plume light flickers slightly in drift mode: the drift EMA absorbs that, so it is left out while drifting
+   * (otherwise every frame would restart the accumulation).
+   */
+  private signatureChanged(): boolean {
+    const g = this.ctx!.globals, p = this.params;
+    const drifting = g.uDrift.value > 0;
+    const n = 18 + this.paramKeys.length;   // 5 colours x 3 + view mode, fog density, drifting + params
+    if (this.sig.length !== n) { this.sig = new Float64Array(n).fill(NaN); }
+    let changed = false;
+    this.sigN = 0;
+    changed = this.sigColor(g.uSunColor.value) || changed;
+    changed = this.sigColor(g.uSkyAmbient.value) || changed;
+    changed = this.sigColor(g.uGroundAmbient.value) || changed;
+    changed = this.sigColor(g.uFogColor.value) || changed;
+    changed = this.sigColor(drifting ? null : g.uPlumeLight.value) || changed;
+    changed = this.sigPut(g.uViewMode.value, 0) || changed;
+    changed = this.sigPut(g.uFogDensity.value, 0) || changed;
+    changed = this.sigPut(drifting ? 1 : 0, 0) || changed;
+    for (const k of this.paramKeys) changed = this.sigPut(p[k], 0) || changed;
+    return changed;
+  }
+  private sigPut(v: number, tol: number): boolean {
+    const i = this.sigN++;
+    const old = this.sig[i];
+    if (old === v || Math.abs(old - v) <= tol) return false;
+    this.sig[i] = v;
+    return true;
+  }
+  private sigColor(c: THREE.Color | null): boolean {
+    const a = this.sigPut(c ? c.r : -1, 1e-4), b = this.sigPut(c ? c.g : -1, 1e-4), d = this.sigPut(c ? c.b : -1, 1e-4);
+    return a || b || d;
   }
 
   onPreset(_p: LightingPreset): void {

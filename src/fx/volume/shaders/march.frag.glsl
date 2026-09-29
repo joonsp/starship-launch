@@ -16,6 +16,10 @@
 //   integration: Hillaire 2015 energy-conserving  L += T * (S - S*exp(-st*dt)) / st
 // Stops at the opaque depth; empty-space skipping via a max-density occupancy volume; R2 + golden-
 // ratio jitter; stochastic texture filtering; near-field detailed shadows for the sun and the sky.
+// Detail is distance-adaptive: every noise octave is faded to its mean once its cells are smaller than a few
+// pixels (uPixAngle x distance), a mid-scale billow octave carves the 10-30 m cauliflower lobes the density bake
+// cannot hold, and a finer octave, a finer step and shorter shadow / occlusion / fire-relief taps switch in near
+// the camera (walk, fly). Each visit traces a different sub-pixel position, so the accumulation antialiases.
 
 uniform highp sampler3D uDensity;
 uniform highp sampler3D uOccupancy;
@@ -39,13 +43,14 @@ uniform float uVisit;       // how many times this frame's sub-pixel offset has 
 uniform int uSteps;
 uniform int uHasDepth;
 uniform int uHasPlume;
+uniform float uPixAngle;    // angular size of one full-res pixel (rad): noise LOD by distance
 
 uniform vec3 uBoxMin;
 uniform vec3 uBoxSize;
 uniform vec3 uOccRes;
 uniform vec3 uOccCell;     // world size of one occupancy cell (m)
 uniform int uFlags;        // debug bits: 1 no empty-space skipping, 2 white-noise jitter,
-                           //             8 no near-field sky occlusion, 16 no rim wisps
+                           //             8 no near-field sky occlusion, 16 no rim wisps, 32 no sub-pixel AA
 uniform int uNearShadow;   // near-field sun-shadow samples on the detailed density (0..3)
 uniform int uLightDebug;   // 0 all, 1 sun, 2 sky+ground ambient, 3 plume+fire light, 4 emission
 uniform float uSigma;
@@ -64,6 +69,8 @@ uniform vec4 uGains;      // sun, ambient, plume, emission
 uniform float uSunTauScale;
 uniform vec3 uShapeP;     // amount, 1/scale (1/m), -
 uniform vec3 uDetailP;    // amount, 1/scale (1/m), crispness
+uniform vec3 uBillowP;    // mid-scale billow octave: displacement amount, 1/scale (1/m), -
+uniform vec2 uTrenchAxis; // world xz direction of the flame-trench axis (pad-local +x, ESE): thermal field
 uniform float uNearFade;
 uniform int uViewMode;
 uniform vec3 uFogColor;
@@ -124,6 +131,17 @@ vec2 boxHit(vec3 ro, vec3 rd) {
 
 // Coarse (un-eroded) baked density at the last medium() sample: the ambient normal reuses it.
 float gBase = 0.0;
+// Turbulent mixing variable (0..1, mean ~0.5) at the last medium() sample: the billow + detail noise the
+// surface was carved with. Hot gas / thermal temperatures vary with it (pockets of hotter and cooler gas).
+float gMix = 0.5;
+// Footprint (m) of one pixel at the current VIEW sample. The shadow / occlusion taps of that sample reuse it, so
+// they see the same (LOD-faded) detail as the surface they shade.
+float gLodW = 0.0;
+// Mean of the 1 - F1 Worley channels of the noise bakes (the value an octave fades to when it is sub-pixel).
+const float WORLEY_MEAN = 0.48;
+
+// LOD weight of a noise octave whose cells are `lambda` metres: 1 when a cell spans >= ~4 pixels, 0 below ~1.5.
+float lodK(float lambda) { return smoothstep(1.5 * gLodW, 4.0 * gLodW, lambda); }
 
 // Density (x) and temperature (y) at world point p; t = distance from the camera (near fade).
 vec2 medium(vec3 p, float t, out vec3 uvw) {
@@ -142,28 +160,71 @@ vec2 medium(vec3 p, float t, out vec3 uvw) {
   base.r = min(base.r / dil, 1.0);
   vec3 pn = p - uDriftOffset;
   // 1. large-scale Perlin-Worley shape erosion (keeps cores, carves the mass boundaries)
-  // (noise lookups also get the stochastic sub-texel offset: trilinear facets of the 128^3 / 32^3
+  // (noise lookups also get the stochastic sub-texel offset: trilinear facets of the 128^3 / 64^3
   //  noise grids would otherwise print a fine texel-grid grain once `crisp` sharpens the density)
   vec4 s = texture(uShape, pn * uShapeP.y + gStoch * (1.0 / 128.0));
   float shape = s.r * 0.62 + s.g * 0.26 + s.b * 0.12;
   float d = remap01(base.r, (1.0 - shape) * uShapeP.x);
   if (d <= 0.0) return vec2(0.0, base.g);
-  // 2. cauliflower erosion: carve along Worley cell boundaries (F1 large) so the surface follows
-  //    round cells at 3 scales; wispy (inverse) inside the low ground roll
-  vec4 e = texture(uDetail, pn * uDetailP.y + gStoch.zxy * (1.0 / 32.0));
-  float ef = e.r * 0.5 + e.g * 0.3 + e.b * 0.2;      // (finer octaves weighted up: small cauliflower bumps)
+  // 2. mid-scale billows: Worley cells of ~9-32 m displace the surface in and out (mean-neutral, so the
+  //    fitted silhouette keeps its area): the cauliflower lobes of the photo, which the bake (6-7 m voxels at
+  //    medium) cannot carry. Each lobe then self-shadows through the near-field sun taps below.
+  float bs = uBillowP.y;
+  vec4 bw = texture(uDetail, pn * bs + vec3(0.57, 0.21, 0.83) + gStoch.yxz * (1.0 / 64.0));
+  float lamB = 0.25 / bs;                                  // cell size of the finest (b) channel, m
+  float bf = bw.r * 0.55 + bw.g * 0.3 + mix(WORLEY_MEAN, bw.b, lodK(lamB)) * 0.15;
+  d = clamp(d + uBillowP.x * (bf - WORLEY_MEAN) * (1.0 - 0.5 * d), 0.0, 1.0);
+  if (d <= 0.0) return vec2(0.0, base.g);
+  // 3. cauliflower erosion: carve along Worley cell boundaries (F1 large) so the surface follows
+  //    round cells at 3 scales; wispy (inverse) inside the low ground roll. Octaves finer than a few
+  //    pixels fade to their mean (no sub-pixel aliasing far away, full detail up close).
+  vec4 e = texture(uDetail, pn * uDetailP.y + gStoch.zxy * (1.0 / 64.0));
+  float lamD = 0.25 / uDetailP.y;                          // cell size of the g channel (4 cells / tile), m
+  float ef = e.r * 0.5 + mix(WORLEY_MEAN, e.g, lodK(lamD)) * 0.3 + mix(WORLEY_MEAN, e.b, lodK(0.5 * lamD)) * 0.2;
+  // near-field octave (4x finer: cells ~2.2, 1.1, 0.56 m), added as a delta from its mean where it is resolved
+  vec4 e2 = texture(uDetail, pn * uDetailP.y * 4.0 + 0.31 + gStoch.yzx * (1.0 / 64.0));
+  float kN = lodK(0.25 * lamD);
+  ef += ((e2.g * 0.6 + e2.b * 0.4) - WORLEY_MEAN) * 0.35 * kN;
+  gMix = clamp(0.5 + (bf - WORLEY_MEAN) * 1.6 + (ef - WORLEY_MEAN) * 0.8, 0.0, 1.0);
   float billow = clamp((p.y - 6.0) / 30.0, 0.0, 1.0);
   float det = mix(ef, 1.0 - ef, billow);
   d = remap01(d, det * uDetailP.x);
-  // 3. crisp surface: dense steam goes from clear air to opaque within a metre or two
+  // 4. crisp surface: dense steam goes from clear air to opaque within a metre or two
   //    (the old, diluted steam of the high tops has mixed with air: softer, rounder lobes, not beads)
   float crisp = mix(uDetailP.z, max(1.5, uDetailP.z * 0.35), smoothstep(170.0, 380.0, p.y));
   d = clamp(d * crisp, 0.0, 1.0) * dil;
-  // 4. rim wisps from a finer octave, only where the density is still thin
-  vec4 e2 = texture(uDetail, pn * uDetailP.y * 3.7 + 0.31 + gStoch.yzx * (1.0 / 32.0));
-  d = remap01(d, (1.0 - e2.r) * ((uFlags & 16) != 0 ? 0.0 : 0.2) * (1.0 - d));
+  // 5. rim wisps from the fine octave's large cells, only where the density is still thin
+  float wisp = mix(WORLEY_MEAN, e2.r, lodK(0.5 * lamD));
+  d = remap01(d, (1.0 - wisp) * ((uFlags & 16) != 0 ? 0.0 : 0.2) * (1.0 - d));
   d *= smoothstep(0.3, uNearFade, t);
   return vec2(d, base.g);
+}
+
+// Thermal view: temperature (K) of the launch cloud at p. A LWIR camera sees the surface temperature of the
+// optically thick droplet cloud, so this is what the march integrates as an emission-only medium.
+//  - Steam that has mixed with the ~298 K morning air: ~334 K low down, cooling to ~310 K at the tops.
+//  - The hot exhaust / flashed-steam mixture leaves both trench ends (|s| ~ 38 m along the axis) as a wall jet:
+//    its centreline excess falls ~1/(1 + x/x0) as it entrains air (x = distance past the exit), it spreads
+//    sideways and upward, and the gas that rose into the banks has mixed more the higher it got.
+//  - Round the mount the flame bucket feeds hot gas up the plume foot.
+//  - The baked fireball / outflow puffs (temperature channel) are the flame itself: 700-2500 K.
+//  - Mixing: pockets of hotter and cooler gas (the turbulent noise) and cooler, air-diluted thin edges.
+float steamKelvin(vec3 p, float dens, float mixN, float tempG) {
+  float h = max(p.y, 0.0);
+  float sAx = dot(p.xz, uTrenchAxis);                              // m along the trench axis (+ = ESE)
+  float lAx = dot(p.xz, vec2(-uTrenchAxis.y, uTrenchAxis.x));     // m across it
+  float x = max(abs(sAx) - 38.0, 0.0);
+  float bw = 16.0 + 0.3 * x, bh = 14.0 + 0.2 * x;                  // lateral / vertical e-folding scales (m)
+  float jet = exp(-(lAx * lAx) / (bw * bw)) * exp(-h / bh) / (1.0 + x / 40.0);
+  float r = length(p.xz);
+  float foot = exp(-(r * r) / (45.0 * 45.0)) * exp(-h / 55.0);
+  // what rose into the banks: the heat carried up from the jets, diluted with height
+  float bank = exp(-h / 75.0) / (1.0 + x / 90.0);
+  float excess = 1150.0 * max(jet, 0.8 * foot) + 110.0 * bank;
+  excess *= mix(0.55, 1.45, mixN) * mix(0.6, 1.0, smoothstep(0.03, 0.5, dens));
+  float kSteam = 308.0 + 26.0 * exp(-h / 110.0) + excess;
+  float kFire = mix(700.0, 2500.0, smoothstep(0.1, 1.0, tempG)) * mix(0.9, 1.08, mixN);
+  return max(kSteam, mix(kSteam, kFire, smoothstep(0.06, 0.2, tempG)));
 }
 
 float hg(float c, float g) { return sl_hg(c, g); }
@@ -176,7 +237,11 @@ void main() {
   ivec2 lp = ivec2(gl_FragCoord.xy);
   vec2 s = uFullRes / uLowRes;
   ivec2 q = min(ivec2(floor((vec2(lp) + uJitter) * s)), ivec2(uFullRes) - 1);
-  vec2 uv = (vec2(q) + 0.5) / uFullRes;
+  // sub-pixel position inside pixel q: an R2 sequence over this pixel's visits (Cranley-Patterson rotated per
+  // pixel), so the accumulation box-filters the pixel instead of point-sampling detail finer than it (aliasing)
+  vec2 sub = (uFlags & 32) != 0 ? vec2(0.5)
+           : fract(vec2(0.7548776662, 0.5698402910) * (floor(uVisit) + 1.0) + vec2(sl_hash12(vec2(q)), sl_hash12(vec2(q) + 17.31)));
+  vec2 uv = (vec2(q) + sub) / uFullRes;
   vec4 vd = uProjInv * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
   vec3 viewDir = normalize(vd.xyz / vd.w);
   vec3 rd = normalize(mat3(uCamMatrixWorld) * viewDir);
@@ -224,24 +289,26 @@ void main() {
       plumeC = vec3(sl_luma(plumeC)); fireC = vec3(sl_luma(fireC)); albedo = 0.85;
     }
 
-    // Jitter: R2 low-discrepancy dither on the traced full-res pixel (isotropic, unlike IGN whose
-    // x-major structure leaves vertical residual streaks) + a golden-ratio sequence over this
-    // pixel's own visits (uVisit): every full-res pixel gets a well-stratified 1D sequence.
+    // Jitter: a golden-ratio sequence over this pixel's own visits (uVisit), so every full-res pixel gets a
+    // well-stratified 1D sequence, rotated by a per-pixel hash (Cranley-Patterson). (An R2 dither as the
+    // per-pixel offset left a period-4 residual along x, 0.7549 ~ 3/4: fine vertical combing on the billows.)
     float jit = (uFlags & 2) != 0 ? sl_hash13(vec3(vec2(q), uFrame))
-                                  : fract(dot(vec2(q), vec2(0.7548776662, 0.5698402910)) + uVisit * 0.61803398875);
+                                  : fract(rand3(uvec3(uvec2(q), 0x9E3779B9u)).x + uVisit * 0.61803398875);
     vec3 cellSize = uOccCell;
     // step length grows with distance (roughly constant screen-space sampling) and with a lower
     // step budget; `shaded` counts only steps that evaluate lighting, skips are nearly free.
     float kStep = 0.0026 * sqrt(128.0 / float(uSteps));
+    // (near the camera the step shrinks toward 0.4 m, so the fine near-field octave is not stepped over)
+    #define STEP_AT(t) clamp((t) * kStep + mix(0.3, 0.6, smoothstep(30.0, 200.0, (t))), 0.4, 12.0)
     float t = t0;
-    float dt = clamp(0.6 + t0 * kStep, 0.75, 12.0);
+    float dt = STEP_AT(t0);
     t += dt * jit;
     int shaded = 0;
 
     for (int i = 0; i < 1024; i++) {
       if (shaded >= uSteps || i >= uSteps * 4 || t >= t1) break;
       vec3 p = ro + rd * t;
-      dt = clamp(0.6 + t * kStep, 0.75, 12.0);
+      dt = STEP_AT(t);
 
       // empty-space skipping: jump to the exit of an empty occupancy cell
       vec3 pd = p / uGrowth;
@@ -263,7 +330,9 @@ void main() {
 
       vec3 uvw;
       gStoch = rand3(uvec3(uvec2(q), uint(uVisit) * 1024u + uint(i))) - 0.5;
+      gLodW = t * uPixAngle;
       vec2 m = medium(p, t, uvw);
+      float mixN = gMix;
       vec3 uvwL = uvw + gStoch * uLightTexel;
       float st = m.x * uSigma;
       float stepLen = min(dt, t1 - t);
@@ -275,12 +344,8 @@ void main() {
         vec3 S;
         float kelvin = mix(uTempRange.x, uTempRange.y, m.y);
         if (thermal) {
-          // false colour: steam ~320-400 K, fireball 1500-2500 K; emission-only look
-          vec4 LA = texture(uLightA, uvwL);
-          float kSteam = 320.0 + 80.0 * clamp(LA.g * 0.25 + LA.b * 0.1, 0.0, 1.0);
-          float kHot = mix(400.0, 2500.0, smoothstep(0.08, 1.0, m.y));
-          float kt = mix(kSteam, kHot, smoothstep(0.03, 0.2, m.y));
-          S = st * sl_thermalRamp(kt);
+          // false colour of the temperature field (see steamKelvin); emission-only look
+          S = st * sl_thermalRamp(steamKelvin(p, m.x, mixN, m.y));
         } else {
           vec4 LA = texture(uLightA, uvwL);
           vec3 uq;
@@ -307,7 +372,9 @@ void main() {
           // near-field occlusion on the DETAILED density, probed outward and upward from the face: the
           // cauliflower lumps shade each other's crevices (stochastic cone: a fixed offset prints streaks)
           vec3 oDir = normalize(nrm * min(nLen, 1.0) + vec3(0.0, 0.8, 0.0));
-          float upD = medium(p + oDir * (4.5 + gStoch.y * 3.0) + gStoch.xzy * 4.0, 1e4, uq).x;
+          // (the probe shrinks near the camera, where the fine octave's crevices are resolved)
+          float nearS = clamp(gLodW * 6.0, 0.35, 1.0);
+          float upD = medium(p + (oDir * (4.5 + gStoch.y * 3.0) + gStoch.xzy * 4.0) * nearS, 1e4, uq).x;
           // mid-field: one coarse tap ~16 m out on the base density (a lump under a bigger billow,
           // the base of a bank under its own overhang)
           float upB = texture(uDensity, ((p + oDir * (16.0 + gStoch.x * 6.0) + gStoch.zyx * 6.0) / uGrowth - uBoxMin) / uBoxSize).r;
@@ -316,12 +383,14 @@ void main() {
           float gv = texture(uLightB, uvwV).r * gndF * mix(1.0, occ, 0.5);
           // sun optical depth: near field marched on the DETAILED density (crisp self-shadowing of
           // the billows, finer than the light grid), far field from the bake beyond that
+          // (segments grow x3: 4, 12, 36 m far away, where they must span the billow lobes; from 1.5 m up close)
           float tauN = 0.0, reach = 0.0;
+          float seg = clamp(gLodW * 8.0, 1.5, 4.0);
           for (int k = 0; k < 3; k++) {
             if (k >= uNearShadow) break;
-            float seg = 3.0 * exp2(float(k));                  // 3, 6, 12 m segments
             tauN += medium(p + uSunDir * (reach + (0.5 + gStoch[k]) * seg), 1e4, uq).x * seg;
             reach += seg;
+            seg *= 3.0;
           }
           float tauFar = reach > 0.0 ? texture(uLightA, ((p + uSunDir * reach) / uGrowth - uBoxMin) / uBoxSize + gStoch * uLightTexel).r : LA.r;
           float tauS = (tauN + tauFar) * uSigma * uSunTauScale;
@@ -350,6 +419,9 @@ void main() {
           vec3 pf = p / uGrowth;
           float tauF = texture(uDensity, (pf + fdir * 7.0 - uBoxMin) / uBoxSize).r * 8.0
                      + texture(uDensity, (pf + fdir * 20.0 - uBoxMin) / uBoxSize).r * 14.0;
+          // near the camera one detailed tap toward the fire gives each billow its lit and its shadowed side
+          float nearK = 1.0 - smoothstep(0.12, 0.35, gLodW);
+          if (nearK > 0.0) tauF += medium(p + fdir * (1.5 + 3.0 * (0.5 + gStoch.z)), 1e4, uq).x * 6.0 * nearK;
           // (dense billows that turn their face away from the pad keep only a small diffuse share; thin haze
           //  and faces toward the fire get the full baked glow)
           float fireRelief = 0.05 + 0.95 * exp(-tauF * uSigma * 0.3);
@@ -372,6 +444,8 @@ void main() {
           if (!clay && (uLightDebug == 0 || uLightDebug == 4)) {
             // blackbody emission of the hot gas (Kirchhoff: thick fireball -> B(T))
             if (hot > 0.0) {
+              // turbulent mixing: pockets of hotter and cooler gas (an isothermal thick emitter would be flat)
+              kelvin *= mix(0.9, 1.07, mixN);
               float k4 = kelvin / 2400.0;   // Stefan-Boltzmann shape: T^4, 2400 K core ~ 8 x gain
               S += st * hot * sl_blackbody(kelvin) * (k4 * k4 * k4 * k4) * 8.0 * uGains.w;
             }

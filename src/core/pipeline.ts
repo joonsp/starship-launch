@@ -140,9 +140,10 @@ export class Pipeline {
   readonly overlayScene = new THREE.Scene();
   readonly sun: THREE.DirectionalLight;
   readonly hemi: THREE.HemisphereLight;
-  /** Scale of the volume march in planar-reflection views (relative to the reflection target). */
-  reflectionVolumeScale = 0.25;
-  reflectionVolumeSteps = 32;
+  /** Scale of the volume march in planar-reflection views (relative to the reflection target; the volume refines the
+   *  mirror progressively to the target's full resolution while the camera is still) and its step budget. */
+  reflectionVolumeScale = 0.5;
+  reflectionVolumeSteps = 40;
 
   private readonly ctx: AppContext;
   private plume: PlumeLike | null = null;
@@ -244,8 +245,8 @@ export class Pipeline {
       s.map?.dispose();
       (s as { map: THREE.WebGLRenderTarget | null }).map = null;
     }
-    this.reflectionVolumeScale = q.id === 'low' ? 0.2 : 0.25;
-    this.reflectionVolumeSteps = q.id === 'low' ? 24 : q.id === 'ultra' ? 40 : 32;
+    this.reflectionVolumeScale = q.id === 'low' ? 0.34 : 0.5;
+    this.reflectionVolumeSteps = q.id === 'low' ? 28 : q.id === 'ultra' ? 48 : 40;
     this.fitShadowFrustum();   // the biases scale with the shadow texel size
     this.resize();
   }
@@ -316,9 +317,11 @@ export class Pipeline {
   }
 
   /**
-   * ctx.renderView: the full scene (sky, opaques, the launch clouds at low quality) into `target`. Used by the
-   * env module's planar reflection. Re-entrancy safe (a nested call is a no-op). `clipPlane` (world space; via
-   * opts or camera.userData.clipPlane) clips everything on its negative side, e.g. below the water plane.
+   * ctx.renderView: the full scene (sky, opaques, the launch clouds) into `target`. Used by the env module's planar
+   * reflection, which calls it only when the camera moves: the volume pass then keeps refining the steam in `target`
+   * over the next frames (progressive accumulation), so the mirror converges while the camera is still.
+   * Re-entrancy safe (a nested call is a no-op). `clipPlane` (world space; via opts or camera.userData.clipPlane)
+   * clips everything on its negative side, e.g. below the water plane.
    */
   renderView(camera: THREE.Camera, target: THREE.WebGLRenderTarget, opts: RenderViewOptions = {}): void {
     if (this.inView) return;

@@ -7,6 +7,9 @@
 //      is weighted by its distance to this pixel and by the similarity of its opaque depth to this
 //      pixel's depth, so samples that stopped at the tower/vehicle never bleed onto the sky or the
 //      clouds behind (no halos).
+// With REFLECTION defined (the planar-reflection view, see VolumePass.renderView) uColor is a copy of the
+// mirror target: rgb = opaque colour, a = linear view depth (the target's own depth texture is attached to the
+// framebuffer this pass writes, so it cannot be sampled here); no plume, alpha 1.
 uniform highp sampler2D uColor;
 uniform highp sampler2D uDepth;
 uniform highp sampler2D uPlume;
@@ -33,8 +36,14 @@ float linDepth(float d) {
 
 void main() {
   ivec2 q = ivec2(gl_FragCoord.xy);
+#ifdef REFLECTION
+  vec4 opaque = texelFetch(uColor, q, 0);
+  float z = opaque.a;
+  opaque.a = 1.0;
+#else
   vec4 opaque = texture(uColor, vUv);
   float z = uHasDepth == 1 ? linDepth(texelFetch(uDepth, q, 0).r) : uFar;
+#endif
 
   vec4 vol = vec4(0.0, 0.0, 0.0, 1.0);
   float tp = 1.0;
@@ -43,6 +52,23 @@ void main() {
   if (covered) {
     vol = texelFetch(uAcc0, q, 0);
     tp = a1.x;
+#ifdef REFLECTION
+    // wind ripples stretch a reflection vertically: a short vertical tent filter over the converged mirror steam,
+    // depth-aware (taps whose ray stopped at a different opaque depth, e.g. across the tower's mirror image, drop out)
+    vec4 sum = vol * 3.0;
+    float ws = 3.0;
+    ivec2 hiQ = ivec2(uFullRes) - 1;
+    for (int k = -3; k <= 3; k++) {
+      if (k == 0) continue;
+      ivec2 qk = clamp(q + ivec2(0, k), ivec2(0), hiQ);
+      vec4 b1 = texelFetch(uAcc1, qk, 0);
+      float dd = abs(b1.z - z) / (0.03 * min(b1.z, z) + 0.5);
+      float w = (4.0 - abs(float(k))) * float(b1.y > 0.5) * exp(-dd * dd);
+      sum += texelFetch(uAcc0, qk, 0) * w;
+      ws += w;
+    }
+    vol = sum / ws;
+#endif
   } else {
     vec2 s = uFullRes / uLowRes;
     ivec2 c = ivec2(floor((vec2(q) + 0.5) / s));

@@ -1,4 +1,4 @@
-// Bake: 32^3 RGBA8 detail/erosion noise (tileable).
+// Bake: 64^3 RGBA8 detail/erosion noise (tileable).
 //   R, G, B = billowy Worley at 2, 4, 8 cells per tile; A = Perlin (4 cells) for rim wisps.
 uniform float uZ;
 in vec2 vUv;
