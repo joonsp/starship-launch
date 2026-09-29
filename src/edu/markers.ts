@@ -135,6 +135,27 @@ export class HotspotMarkers {
     }
     // greedy label placement by priority
     visible.sort((a, b) => b.hs.priority - a.hs.priority || a.hs.id.localeCompare(b.hs.id));
+    // Pins whose anchors project onto (almost) the same pixels (a 200 m stack seen from 700 m) would sit on top of each
+    // other and hide a target: push each lower-priority pin out along the line away from the pins already placed, just far
+    // enough to keep them apart (a few pixels; the anchors are approximate at this scale anyway).
+    const gap = PIN * 0.95;
+    visible.forEach((it, i) => {
+      for (let iter = 0; iter < 4; iter++) {
+        let moved = false;
+        for (let j = 0; j < i; j++) {
+          const o = visible[j];
+          let dx = it.px - o.px, dy = it.py - o.py;
+          let d = Math.hypot(dx, dy);
+          if (d >= gap) continue;
+          if (d < 0.01) { const a = (i * 2.399963) % (Math.PI * 2); dx = Math.cos(a); dy = Math.sin(a); d = 1; }   // identical: spread on a golden-angle spiral
+          const push = gap - Math.hypot(it.px - o.px, it.py - o.py) || gap;
+          it.px += (dx / d) * push; it.py += (dy / d) * push;
+          moved = true;
+        }
+        if (!moved) break;
+      }
+      it.pin.style.transform = `translate(${it.px - PIN / 2}px, ${it.py - PIN / 2}px)`;
+    });
     const placed: Rect[] = visible.map((it) => ({ x: it.px - PIN / 2, y: it.py - PIN / 2, w: PIN, h: PIN }));
     const lines: string[] = [];
     for (const it of visible) {

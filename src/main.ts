@@ -10,21 +10,26 @@
 //   -> plume [renderer] -> volume bakes [quality, globals] -> post chain -> Pipeline.build (frame graph)
 //   -> edu (overlay reparented into the pipeline's overlay scene) -> precompile -> warm frames -> hideLoading
 //   -> auto-quality frame-time probe.
-// Per frame: controls.update -> globals (time, camera, resolution) -> module updates -> pipeline.render -> uFrame++.
+// Per frame: controls.update -> globals (time, camera, resolution) -> module updates -> [idle gate] -> pipeline.render -> uFrame++.
+// Idle gate: the scene is frozen, so once the cloud accumulation has converged, the shadow map has settled and nothing
+// else changed, the frame is NOT drawn at all (near-idle GPU; the DOM UI keeps running). See needsFrame() below.
+// Anything that changes the image without going through an event (a QA script poking a module) must call
+// window.app.invalidate(); ?idle=0 turns the gate off.
 //
 // URL parameters (QA / deep links):
 //   ?preset=photo|noon|night|thermal|clay  ?mode=orbit|photo|walk|fly  ?quality=auto|low|medium|high|ultra
 //   ?edu=1  ?lang=en|fi  ?ui=0 (hide all chrome)  ?drift=1  ?probe=0 (no auto-quality probe)
-//   ?bake=512 (sky cube face size override; for software-rendered QA only)
+//   ?bake=512 (sky cube face size override; for software-rendered QA only)  ?idle=0 (draw every frame, no idle gate)
 // window.app = { ctx, controller, modules, pipeline, ui, setPreset, setQuality, setMode, setEdu, setLang, setDrift,
-//                exportStill, ready, frames } for scripted screenshots (scripts/qa-*.mjs).
+//                exportStill, invalidate, stats, ready, frames, drawn } for scripted screenshots (scripts/qa-*.mjs).
 import './styles/tokens.css';
 import './styles/app.css';
 import * as THREE from 'three';
 import type { AppContext, CameraModeId, Lang, LightingPresetId, Module, QualityChoice, QualityId } from './contracts.ts';
 import { createEmitter, createGlobals } from './core/context.ts';
 import { CAMERA_FAR, CAMERA_NEAR, Pipeline, createRenderer } from './core/pipeline.ts';
-import { FrameProbe, QUALITY_LEVELS, guessQuality, lowerQuality } from './core/quality.ts';
+import { FrameProbe, QUALITY_LEVELS, WARM_FRAMES_MAX, guessQuality, lowerQuality } from './core/quality.ts';
+import { probeStale, shouldDraw } from './core/idle.ts';
 import { ANCHORS, QUALITY, T_F } from './scene-config.ts';
 import { registerStrings, setLang as i18nSetLang, t } from './i18n.ts';
 import { PRESET_ORDER, UiShell, type UiHandlers } from './ui/index.ts';
@@ -69,6 +74,7 @@ const initialEdu = params.get('edu') === '1';
 const initialDrift = params.get('drift') === '1';
 const hideUi = params.get('ui') === '0';
 const probeEnabled = params.get('probe') !== '0';
+const idleGate = params.get('idle') !== '0';
 const bakeOverride = Number(params.get('bake')) || undefined;
 
 // ── DOM ─────────────────────────────────────────────────────────────────────────────────────────
@@ -134,6 +140,13 @@ ctx.globals.uDrift.value = initialDrift ? 1 : 0;
 for (const type of ['camera-moved', 'preset', 'quality', 'drift', 'reset-accumulation'] as const) {
   ctx.events.on(type, () => { ctx.globals.uFrame.value = 0; });
 }
+// Idle gate: every event that can change the image keeps the frame loop drawing for a few frames (the volume pass,
+// the shadow settle and the sky rebake then hold it awake for as long as they need; see needsFrame()).
+let awakeFrames = 8;
+const wake = (n = 6): void => { awakeFrames = Math.max(awakeFrames, n); };
+for (const type of ['camera-moved', 'camera-mode', 'preset', 'quality', 'lang', 'edu', 'drift', 'reset-accumulation'] as const) {
+  ctx.events.on(type, () => wake());
+}
 
 const pipeline = new Pipeline(ctx);
 
@@ -157,13 +170,20 @@ const qualityModules: Array<{ onQuality?(q: typeof ctx.quality): void }> = [env,
 let exporting = false;
 let probe: FrameProbe | null = null;
 let probeRounds = 0;
+let probedPixels = 0;   // drawing-buffer pixels when the last probe was armed
 
 const app = {
   ctx, controller: controls, pipeline, ui: null as unknown as UiShell,
   modules: { controls, env, vehicle, pad, plume, volume, edu, post: null as PostChain | null },
   ready: false,
+  /** Frame-loop ticks (drawn or skipped by the idle gate). */
   frames: 0,
+  /** Frames actually drawn. */
+  drawn: 0,
+  /** Renderer stats of the last drawn frame (the idle gate skips frames, so renderer.info itself reads 0 while idle). */
+  stats: { calls: 0, triangles: 0, programs: 0, idle: false },
   gpu: guess,
+  invalidate: () => wake(12),
   setPreset, setQuality, setMode, setEdu, setLang, setDrift,
   exportStill: doExport,
 };
@@ -176,7 +196,11 @@ function setPreset(id: LightingPresetId): void {
   app.ui?.update({ preset: id });
 }
 
-function applyQualityLevel(id: QualityId): void {
+/** > 0 while the programs of a new quality level link in the background: the last frame stays on screen (no stall). */
+let compiling = 0;
+let qualityQueued: QualityId | null = null;
+
+function applyQualitySync(id: QualityId): void {
   if (ctx.quality.id === id) return;
   const q = QUALITY[id];
   ctx.quality = q;
@@ -185,11 +209,44 @@ function applyQualityLevel(id: QualityId): void {
   ctx.events.emit({ type: 'quality', quality: q });     // plume, volume and post subscribe themselves
 }
 
+/**
+ * A tier changes shader defines (pad / vehicle detail octaves, post kernels). While the app is running, the modules
+ * get the new tier first, the programs link in the background with the OLD canvas still on screen, and only then are the
+ * canvas and the render targets resized (a canvas resize blanks it until the next draw, so it must not sit in front of
+ * a long compile). With KHR_parallel_shader_compile the main thread is not blocked meanwhile.
+ */
+function applyQualityLevel(id: QualityId): void {
+  if (!app.ready) { applyQualitySync(id); return; }
+  if (compiling > 0) { qualityQueued = id; return; }      // one change in flight: the latest request wins afterwards
+  if (ctx.quality.id === id) return;
+  const q = QUALITY[id];
+  ctx.quality = q;
+  for (const m of qualityModules) m.onQuality?.(q);
+  compiling++;
+  void pipeline.precompile(true)
+    .catch((e) => console.warn('[app] precompile after quality change failed', e))
+    .finally(() => {
+      pipeline.applyQuality(q);
+      ctx.events.emit({ type: 'quality', quality: q });
+      compiling--;
+      wake(12);
+      const next = qualityQueued;
+      qualityQueued = null;
+      if (next && next !== ctx.quality.id) applyQualityLevel(next);
+    });
+}
+
+function armProbe(): void {
+  probe = new FrameProbe();
+  probedPixels = ctx.globals.uResolution.value.x * ctx.globals.uResolution.value.y;
+}
+
 function setQuality(choice: QualityChoice): void {
   qualityChoice = choice;
   applyQualityLevel(effective());
   app.ui?.update({ quality: choice, effectiveQuality: effective() });
-  probe = choice === 'auto' && probeEnabled && app.ready ? new FrameProbe() : null;
+  probe = null;
+  if (choice === 'auto' && probeEnabled && app.ready) armProbe();
   probeRounds = 0;
 }
 
@@ -216,14 +273,64 @@ function setDrift(on: boolean): void {
   app.ui?.update({ drift: on });
 }
 
-/** One full frame: camera, globals, modules, frame graph. */
-function step(dt: number, t: number): void {
-  controls.update(dt, t);
+/** Overlay (edu annotations) state that the camera-moved event does not cover: which 3D objects are visible. */
+let overlaySig = '';
+function overlaySignature(): string {
+  let sig = pipeline.overlayScene.visible ? '1' : '0';
+  pipeline.overlayScene.traverse((o) => { sig += o.visible ? '1' : '0'; });
+  return sig;
+}
+
+/** Does anything on screen still change? False -> the frame is skipped and the GPU idles (see src/core/idle.ts). */
+let skyJobWas = false;
+function needsFrame(): boolean {
+  const sig = overlaySignature();
+  const overlayChanged = sig !== overlaySig;
+  overlaySig = sig;
+  // the sky swap happens in the tick the re-bake finishes (job already gone): that tick must still draw it
+  const skyJob = !!(env as unknown as { skyJob?: unknown }).skyJob;
+  const skyJobRunning = skyJob || skyJobWas;
+  skyJobWas = skyJob;
+  return shouldDraw({
+    gate: idleGate,
+    ready: app.ready,
+    awakeFrames,
+    drifting: ctx.globals.uDrift.value > 0,
+    volumeConverged: volume.pass.converged,
+    pipelineBusy: pipeline.busy,
+    skyJobRunning,
+    overlayChanged,
+    compiling: compiling > 0,
+  });
+}
+
+let lastDrew = true;
+let eduIdleTick = 0;
+
+/** One full frame: camera, globals, modules, then (unless idle) the frame graph. Returns true if it drew. */
+function step(dt: number, t: number, force = false, freezeCamera = false): boolean {
+  if (!freezeCamera) controls.update(dt, t);
+  // While a new quality tier links its programs nothing else may draw: a module update can render on its own (the mirror
+  // pass of the tidal pools) and would link the not-yet-compiled variants synchronously, i.e. the stall we are hiding.
+  if (!force && compiling > 0) { lastDrew = false; return false; }
   pipeline.beginFrame(t);   // shadow refresh arming + per-frame globals (time, camera position, resolution)
-  for (const m of frameModules) m.update?.(dt, t);
+  for (const m of frameModules) {
+    // the education layer lays out DOM (bounding boxes, label placement): while nothing is drawn, 15 Hz is plenty
+    if (m === edu && !lastDrew && (++eduIdleTick & 3) !== 0) continue;
+    m.update?.(dt, t);
+  }
+  if (!force && !needsFrame()) { lastDrew = false; return false; }
+  lastDrew = true;
+  if (awakeFrames > 0) awakeFrames--;
   pipeline.render(dt);
+  pipeline.endFrame();
   ctx.globals.uFrame.value++;
-  app.frames++;
+  app.drawn++;
+  const info = renderer.info;
+  app.stats.calls = info.render.calls;
+  app.stats.triangles = info.render.triangles;
+  app.stats.programs = info.programs?.length ?? 0;
+  return true;
 }
 
 /** Export a converged still at 2x (PNG download). `download: false` returns the blob instead (QA). */
@@ -237,7 +344,7 @@ async function doExport(download = true): Promise<ExportResult | null> {
       const now = performance.now();
       const dt = Math.min((now - clock) / 1000, 0.1);
       clock = now;
-      step(dt, ctx.globals.uTime.value + dt);
+      step(dt, ctx.globals.uTime.value + dt, true, true);   // the camera stays put while the still converges
     }, 2, {
       frames: 32,
       download,
@@ -250,6 +357,7 @@ async function doExport(download = true): Promise<ExportResult | null> {
   } finally {
     pipeline.resize();
     exporting = false;
+    wake(12);
   }
   return res;
 }
@@ -301,7 +409,22 @@ ctx.events.on('drift', (e) => ui.update({ drift: e.enabled }));
 let loadFrac = 0;
 const stage = (label: string, f: number): void => { loadFrac = Math.max(loadFrac, f); ui.setLoading(label, loadFrac); };
 THREE.DefaultLoadingManager.onProgress = (_url, loaded, total) => stage('models', 0.05 + 0.25 * (loaded / Math.max(total, 1)));
-addEventListener('resize', () => { if (!exporting) pipeline.resize(); });
+// Resizing blanks the canvas until the next draw, so it is applied at the START of an animation frame, right before that
+// frame draws (a resize event fires before the frame's rAF callbacks; doing it in a separate rAF callback would present
+// one blank frame). Bursts (dragging a window edge) also coalesce into one reallocation per frame.
+let resizePending = false;
+function flushResize(): void {
+  if (!resizePending || exporting || compiling > 0) return;
+  resizePending = false;
+  pipeline.resize();
+  // A much bigger canvas (fullscreen, a 4K monitor) makes an earlier "ok" verdict stale: measure again (auto only).
+  const px = ctx.globals.uResolution.value.x * ctx.globals.uResolution.value.y;
+  if (app.ready && probeEnabled && qualityChoice === 'auto' && !probe && probeRounds < 2 && probeStale(probedPixels, px)) armProbe();
+}
+addEventListener('resize', () => { resizePending = true; if (!app.ready) flushResize(); });
+// The drawing buffer can be discarded while the tab is in the background (mobile browsers): redraw on return.
+document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(12); });
+addEventListener('pageshow', () => wake(12));
 
 async function start(): Promise<void> {
   stage('models', 0.03);
@@ -336,41 +459,75 @@ async function start(): Promise<void> {
   await pipeline.precompile(true);
   stage('shaders', 0.95);
 
-  // warm frames under the loading screen: the first frame the user sees is a complete one
+  // Warm frames under the loading screen, so the first frame the user sees is a complete one: every program is
+  // linked, every texture uploaded and the cloud accumulation has covered every pixel (the first visits are the noisy
+  // ones). Bounded by time so a slow GPU does not make the loading screen last.
   const timer = new THREE.Timer();
   timer.connect(document);
-  for (let i = 0; i < 2; i++) step(1 / 60, i / 60);
+  const nextFrame = (): Promise<void> => new Promise((res) => {
+    let fired = false;
+    const go = (): void => { if (!fired) { fired = true; res(); } };
+    requestAnimationFrame(go);
+    setTimeout(go, 120);   // a hidden tab never delivers rAF: do not hang the loading screen
+  });
+  stage('frame', 0.97);
+  // first frame with tilt-shift on: links its three programs now instead of at the first click on the lens panel
+  post.setLens({ ...controls.lens, tiltShift: { ...controls.lens.tiltShift, enabled: true } });
+  step(1 / 60, 0, true);
+  post.setLens(controls.lens);
+  await nextFrame();
+  const warmStart = performance.now();
+  for (let i = 0; i < WARM_FRAMES_MAX; i++) {
+    step(1 / 60, i / 60, true);
+    await nextFrame();
+    if (i >= 5 && (volume.pass.converged || performance.now() - warmStart > 2500)) break;
+  }
   stage('ready', 1);
   if (initialEdu) setEdu(true);
   ui.hideLoading();
   app.ready = true;
-  if (qualityChoice === 'auto' && probeEnabled) probe = new FrameProbe();
+  wake(12);
+  if (qualityChoice === 'auto' && probeEnabled) armProbe();
 
   let fps = 60;
+  let prevDrew = false;
+  let lastDrawAt = performance.now();
   renderer.setAnimationLoop((now) => {
     timer.update(now);
     const raw = timer.getDelta();
+    app.frames++;
     if (exporting) return;
+    flushResize();
     const dt = Math.min(raw, 0.1);
-    step(dt, timer.getElapsed());
-    if (raw > 0 && raw < 0.5) fps += (1 / raw - fps) * 0.05;
-    ui.update({ fps });
-    if (probe && raw < 0.25) {
-      probe.feed(raw);
-      if (probe.done) {
-        const verdict = probe.verdict;
-        console.info(`[app] quality probe at ${ctx.quality.id}: median ${probe.medianMs.toFixed(1)} ms -> ${verdict}`);
-        probe = null;
-        if (verdict === 'down' && autoLevel !== 'low' && qualityChoice === 'auto' && probeRounds < 2) {
-          autoLevel = lowerQuality(autoLevel);
-          probeRounds++;
-          applyQualityLevel(autoLevel);
-          ui.update({ effectiveQuality: autoLevel });
-          ui.toast(t('app.toast.qualityDown', { q: t(`ui.quality.${autoLevel}`) }));
-          probe = new FrameProbe();
+    const drew = step(dt, timer.getElapsed());
+    if (drew) {
+      lastDrawAt = performance.now();
+      // frame-time statistics only from back-to-back drawn frames: after idle, the interval is not a frame time
+      if (prevDrew && raw > 0 && raw < 0.5) fps += (1 / raw - fps) * 0.05;
+      ui.update({ fps });
+      // The probe measures the EXPENSIVE state (clouds still marching): converged frames are near-free and would
+      // make a slow GPU look fast.
+      if (probe && prevDrew && raw < 0.25 && !volume.pass.converged) {
+        probe.feed(raw);
+        if (probe.done) {
+          const verdict = probe.verdict;
+          console.info(`[app] quality probe at ${ctx.quality.id}: median ${probe.medianMs.toFixed(1)} ms -> ${verdict}`);
+          probe = null;
+          if (verdict === 'down' && autoLevel !== 'low' && qualityChoice === 'auto' && probeRounds < 2) {
+            autoLevel = lowerQuality(autoLevel);
+            probeRounds++;
+            applyQualityLevel(autoLevel);
+            ui.update({ effectiveQuality: autoLevel });
+            ui.toast(t('app.toast.qualityDown', { q: t(`ui.quality.${autoLevel}`) }));
+            armProbe();
+          }
         }
       }
+    } else if (performance.now() - lastDrawAt > 1200) {
+      ui.update({ fps: undefined });   // idle: nothing is being drawn, so there is no frame rate to show
     }
+    prevDrew = drew;
+    app.stats.idle = !drew;
   });
 }
 

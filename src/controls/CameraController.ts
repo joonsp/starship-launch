@@ -579,15 +579,20 @@ export class CameraController implements Module {
     if (Math.abs(this.baseRoll - target) < 1e-4) this.baseRoll = target;
   }
 
-  private updateOrbit(dt: number): void {
+  /** Ground limit as a polar-angle limit so OrbitControls itself stops (no fighting): y = target.y + r cos(phi) >= minY. Returns minY. */
+  private applyOrbitLimits(): number {
     const o = this.orbit, cam = this.camera;
-    o.enabled = true;
-
-    // Ground limit as a polar-angle limit so OrbitControls itself stops (no fighting): y = target.y + r cos(phi) >= minY.
     if (o.target.y < 0) o.target.y = 0;
     const minY = this.groundFn(cam.position.x, cam.position.z) + ORBIT_MIN_ALT;
     const r = Math.max(cam.position.distanceTo(o.target), 1e-3);
     o.maxPolarAngle = Math.acos(clamp((minY - o.target.y) / r, -1, 1));
+    return minY;
+  }
+
+  private updateOrbit(dt: number): void {
+    const o = this.orbit, cam = this.camera;
+    o.enabled = true;
+    const minY = this.applyOrbitLimits();
     o.update(dt);
     if (cam.position.y < minY) { cam.position.y = minY; cam.lookAt(o.target); }   // safety net (zoom / dolly moved it)
   }
@@ -703,6 +708,7 @@ export class CameraController implements Module {
       case 'orbit': case 'photo':
         this.resetOrbitState(tgt);
         this.orbit.enabled = true;
+        this.applyOrbitLimits();   // the polar limit of the PREVIOUS view (e.g. 8 km out) would otherwise lift the camera onto the target's height
         this.orbit.update();
         break;
       case 'walk': this.initWalkFromPose(tgt, keepBody); this.poseWalk(false); break;
@@ -918,10 +924,15 @@ export class CameraController implements Module {
 
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (isTextEntry(e.target)) return;
+    if (e.target instanceof Element && e.target.closest('dialog')) return;   // help / about are modal: no camera hotkeys behind them
+    if (e.defaultPrevented && MOVE_CODES.has(e.code)) return;                  // a menu / slider already used this arrow key
     const m = this.mode;
-    // Held keys for walk / fly.
+    // Held keys for walk / fly. A focused slider keeps its arrow keys and a focused checkbox its Space (lens panel).
     if ((m === 'walk' || m === 'fly') && MOVE_CODES.has(e.code) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const el = e.target;
+      if (el instanceof HTMLInputElement && ((el.type === 'range' && e.code.startsWith('Arrow')) || (el.type === 'checkbox' && e.code === 'Space'))) return;
       this.keys.add(e.code);
+      if (m === 'walk' && e.code === 'Space' && !e.repeat) this.jumpQueued = true;   // a tap shorter than a frame still jumps
       if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
       return;
     }

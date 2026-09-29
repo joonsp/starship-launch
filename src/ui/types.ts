@@ -56,4 +56,4 @@ export const QUALITY_ORDER: QualityChoice[] = ['auto', 'low', 'medium', 'high', 
 /** Camera modes, in key order (1-4). */
 export const MODE_ORDER: CameraModeId[] = ['orbit', 'photo', 'walk', 'fly'];
 /** Loading stages that have built-in translations; setLoading() also accepts free text. */
-export const LOADING_STAGES = ['models', 'textures', 'pad', 'clouds', 'shaders', 'ready'] as const;
+export const LOADING_STAGES = ['models', 'textures', 'pad', 'clouds', 'shaders', 'frame', 'ready'] as const;
