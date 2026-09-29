@@ -10,7 +10,7 @@ import numpy as np
 
 import pad_geo as pg
 from pad_geo import Geo
-from pad_layout import APRON_TOP, TOWER_HW, CHORD, TR_WALL_OUT, OLM_TOP, OLM_THICK
+from pad_layout import APRON_TOP, TOWER_HW, CHORD, TR_WALL_OUT, OLM_TOP, OLM_THICK, APRON_POLY, in_tower_zone
 
 
 def _v(x, y, z):
@@ -73,24 +73,30 @@ def tower_beacons():
 
 
 def olm_platforms():
-    """Service catwalks on both long sides of the mount at y = 9.5 (outboard of the column rows), ladders to the ground."""
+    """Service catwalks on both long sides of the mount at y = 9.5 (outboard of the column rows), ladders to the ground.
+    Pad-local frame. The north catwalk starts at x = -3 (tower 2 stands beyond the cut north-west corner)."""
     g = Geo()
     y = 9.5
     for s in (-1, 1):
         z = s * 16.9
-        pg.box(g, "grating", [0, y, z], [34.0, 0.06, 1.5])
-        pg.beams(g, "olm_column", _v(-17, y - 0.15, z - 0.7)[None], _v(17, y - 0.15, z - 0.7)[None], 0.16, 0.3)
-        pg.beams(g, "olm_column", _v(-17, y - 0.15, z + 0.7)[None], _v(17, y - 0.15, z + 0.7)[None], 0.16, 0.3)
+        xa = -3.0 if s < 0 else -17.0
+        xb = 17.0
+        xm = (xa + xb) / 2
+        L = xb - xa
+        pg.box(g, "grating", [xm, y, z], [L, 0.06, 1.5])
+        pg.beams(g, "olm_column", _v(xa, y - 0.15, z - 0.7)[None], _v(xb, y - 0.15, z - 0.7)[None], 0.16, 0.3)
+        pg.beams(g, "olm_column", _v(xa, y - 0.15, z + 0.7)[None], _v(xb, y - 0.15, z + 0.7)[None], 0.16, 0.3)
         for x in (-14.0, -5.0, 5.0, 14.0):
-            pg.beams(g, "olm_column", _v(x, y - 0.25, s * 15.2)[None], _v(x, y - 0.25, z + s * 0.75)[None], 0.25, 0.4)
+            if xa <= x <= xb:
+                pg.beams(g, "olm_column", _v(x, y - 0.25, s * 15.2)[None], _v(x, y - 0.25, z + s * 0.75)[None], 0.25, 0.4)
         # handrail (outer edge)
-        xs = np.linspace(-17, 17, 18)
+        xs = np.linspace(xa, xb, int(L // 2) + 1)
         p0 = np.stack([xs, np.full_like(xs, y), np.full_like(xs, z + s * 0.72)], axis=1)
         pg.tubes(g, "galv", p0, p0 + _v(0, 1.1, 0), 0.03, seg=6)
         for hy in (1.1, 0.6):
             pg.tubes(g, "galv", (p0[0] + _v(0, hy, 0))[None], (p0[-1] + _v(0, hy, 0))[None], 0.03, seg=6)
         # ladder with cage at each end
-        for x in (-16.0, 16.0):
+        for x in ((xa + 1.0) if s < 0 else -16.0, 16.0):
             zz = z + s * 0.6
             for dz in (-0.25, 0.25):
                 pg.box(g, "galv", [x + dz, y / 2, zz], [0.06, y, 0.06])
@@ -103,7 +109,7 @@ def olm_platforms():
                     pg.tubes(g, "galv", _v(x + 0.45 * math.cos(a0), yy, zz + s * 0.45 * math.sin(a0))[None],
                              _v(x + 0.45 * math.cos(a1), yy, zz + s * 0.45 * math.sin(a1))[None], 0.02, seg=4)
     # a hoist beam and pulley above the deck edge on the south side (for equipment), and hydraulic power units on the platform
-    for x, zz in ((-9.0, -16.9), (9.0, -16.9)):
+    for x, zz in ((-1.0, -16.9), (9.0, -16.9)):
         pg.box(g, "galv", [x, y + 0.8, zz], [2.2, 1.4, 1.1])
         pg.tubes(g, "dark_steel", _v(x, y + 1.5, zz)[None], _v(x, y + 1.55, zz)[None], 0.4, seg=14)
     return g
@@ -113,16 +119,25 @@ def apron_props():
     """Apron furniture: bollards along the apron edge, manhole covers, cable-tray covers, hydrants, a few GSE skids."""
     g = Geo()
     rng = np.random.RandomState(11)
-    # bollards on the apron edge every 15 m (steel posts with reflective bands)
-    for x in np.arange(-88.0, 89.0, 15.0):
-        for z in (-69.0, 69.0):
+    # bollards along the slab edge every 15 m (steel posts with reflective bands)
+    P = APRON_POLY
+    for a, b in zip(P, P[1:] + P[:1]):
+        L = math.hypot(b[0] - a[0], b[1] - a[1])
+        n = max(int(L // 15.0), 1)
+        for k in range(n):
+            t = (k + 0.5) / n
+            x, z = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+            # step 0.8 m inside the edge (the polygon is CCW-ish in (x,z); inward = toward the centroid)
+            cx, cz = 90.0, 70.0
+            d = math.hypot(cx - x, cz - z)
+            x, z = x + (cx - x) / d * 0.9, z + (cz - z) / d * 0.9
             pg.cyl_y(g, "galv", [[x, APRON_TOP, z]], 0.13, 1.0, seg=8)
             pg.cyl_y(g, "dark_steel", [[x, APRON_TOP + 0.75, z]], 0.135, 0.12, seg=8)
-    for z in np.arange(-60.0, 61.0, 15.0):
-        for x in (-89.0, 89.0):
-            pg.cyl_y(g, "galv", [[x, APRON_TOP, z]], 0.13, 1.0, seg=8)
     # manholes and valve pits (round covers, square frames)
-    for (x, z) in ((-28, -22), (-45, 20), (55, 30), (62, -20), (30, 35), (-60, -10), (-52, 58), (25, -55)):
+    for (x, z) in ((-28, -22), (-45, 20), (55, 30), (62, -20), (30, 35), (-60, -10), (-52, 58), (25, -55), (70, 110), (130, 150),
+                   (-5, 120), (150, 60), (200, 120), (100, 180)):
+        if in_tower_zone(x, z, 1.0):
+            continue
         pg.cyl_y(g, "dark_steel", [[x, APRON_TOP, z]], 0.65, 0.04, seg=20)
         pg.cyl_y(g, "dark_steel", [[x, APRON_TOP, z]], 0.8, 0.02, seg=20)
     # cable-tray covers: long low boxes with joints

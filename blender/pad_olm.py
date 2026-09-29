@@ -24,10 +24,79 @@ def _v(x, y, z):
     return np.array([x, y, z], dtype=float)
 
 
+NW_CUT = 4.0   # the tower-facing (-x,-z) corner is cut back along x + z = -(2 h - NW_CUT): tower 2's footings stand there
+
+
 def deck_outline():
-    """Chamfered-square plan polygon (x,z), counter-clockwise from the +x axis."""
+    """Chamfered-square plan polygon (x,z) in the PAD-LOCAL frame, counter-clockwise from the +x axis. The north-west
+    corner (toward tower 2, which sits at pad-local (-17, -21) once the mount is rotated by PAD_YAW) is cut back."""
     h, c = OLM_HALF, CH
-    return [(h, -(h - c)), (h, h - c), (h - c, h), (-(h - c), h), (-h, h - c), (-h, -(h - c)), (-(h - c), -h), (h - c, -h)]
+    return [(h, -(h - c)), (h, h - c), (h - c, h), (-(h - c), h), (-h, h - c), (-h, -NW_CUT), (-NW_CUT, -h), (h - c, -h)]
+
+
+def inset_poly(poly, d):
+    """Inward offset of a convex CCW polygon (x,z) (edge lines shifted by d, consecutive lines intersected)."""
+    n = len(poly)
+    lines = []
+    for i in range(n):
+        a, b = np.array(poly[i], float), np.array(poly[(i + 1) % n], float)
+        e = (b - a) / np.linalg.norm(b - a)
+        nm = np.array([-e[1], e[0]])          # left normal = inward for the polygon's winding in (x,z) (checked below)
+        lines.append((a + nm * d, e))
+    out = []
+    for i in range(n):
+        p0, e0 = lines[i - 1]
+        p1, e1 = lines[i]
+        M = np.array([[e0[0], -e1[0]], [e0[1], -e1[1]]])
+        t = np.linalg.solve(M, p1 - p0)
+        out.append(tuple(p0 + e0 * t[0]))
+    return out
+
+
+def deck_inside(x, z, m=0.0):
+    """Point inside the deck plan (positive margin = at least m metres from every edge). Convex test."""
+    poly = deck_outline()
+    n = len(poly)
+    for i in range(n):
+        a, b = np.array(poly[i]), np.array(poly[(i + 1) % n])
+        e = b - a
+        cr = e[0] * (z - a[1]) - e[1] * (x - a[0])       # >0 on the left of the edge (interior for this winding)
+        if cr / np.linalg.norm(e) < m:
+            return False
+    return True
+
+
+def clip_to_deck(a, b, m=0.0):
+    """Clip the segment a->b (x,z) to the deck plan shrunk by m (Cyrus-Beck); returns (a', b') or None."""
+    poly = deck_outline()
+    n = len(poly)
+    a = np.array(a, float)
+    d = np.array(b, float) - a
+    t0, t1 = 0.0, 1.0
+    for i in range(n):
+        p, q = np.array(poly[i]), np.array(poly[(i + 1) % n])
+        e = q - p
+        L = np.linalg.norm(e)
+        nrm = np.array([-e[1], e[0]]) / L                # inward normal
+        num = np.dot(a - p, nrm) - m
+        den = np.dot(d, nrm)
+        if abs(den) < 1e-12:
+            if num < 0:
+                return None
+            continue
+        t = -num / den
+        if den > 0:
+            t0 = max(t0, t)
+        else:
+            t1 = min(t1, t)
+        if t0 > t1:
+            return None
+    return a + d * t0, a + d * t1
+
+
+# support columns: two rows; the north-west corner column (-14, -14.25) would stand in tower 2's footing zone
+COL_XS = (-14.0, -5.0, 5.0, 14.0)
+COLUMNS = [(x, z) for z in (-14.25, 14.25) for x in COL_XS if not (x == -14.0 and z < 0)]
 
 
 def _ray_poly(pts, ang):
@@ -65,15 +134,19 @@ def deck_geo():
     pg.revolve(g, "olm_steel", [(HOLE_R, OLM_TOP), (HOLE_R, BOT)], seg=96)
     # raised water-cooled flame ring around the opening (profile bottom->top on the outer surface)
     pg.revolve(g, "olm_steel", [(6.6, OLM_TOP), (5.9, OLM_TOP + 0.34), (HOLE_R, OLM_TOP + 0.30), (HOLE_R, OLM_TOP)], seg=96)
-    # ---- underside stiffeners: a grid of ribs and heavier edge girders ----
+    # ---- underside stiffeners: a grid of ribs and heavier edge girders (clipped to the deck plan: the NW corner is cut) ----
+    def _beam(a, b, w, h, y):
+        c = clip_to_deck(a, b, 0.25)
+        if c is not None and np.linalg.norm(c[1] - c[0]) > 0.5:
+            pg.beams(g, "olm_steel", _v(c[0][0], y, c[0][1])[None], _v(c[1][0], y, c[1][1])[None], w, h)
     for k in np.arange(-13.6, 13.7, 4.25):
         if abs(k) < 0.1:
             continue
-        pg.beams(g, "olm_steel", _v(-15.5, BOT - 0.28, k)[None], _v(15.5, BOT - 0.28, k)[None], 0.45, 0.56)
-        pg.beams(g, "olm_steel", _v(k, BOT - 0.28, -15.5)[None], _v(k, BOT - 0.28, 15.5)[None], 0.45, 0.56)
+        _beam((-15.5, k), (15.5, k), 0.45, 0.56, BOT - 0.28)
+        _beam((k, -15.5), (k, 15.5), 0.45, 0.56, BOT - 0.28)
     for s in (-1, 1):
-        pg.beams(g, "olm_steel", _v(-15.9, BOT - 0.45, s * 5.6)[None], _v(15.9, BOT - 0.45, s * 5.6)[None], 0.7, 0.9)
-        pg.beams(g, "olm_steel", _v(s * 5.6, BOT - 0.45, -15.9)[None], _v(s * 5.6, BOT - 0.45, 15.9)[None], 0.7, 0.9)
+        _beam((-15.9, s * 5.6), (15.9, s * 5.6), 0.7, 0.9, BOT - 0.45)
+        _beam((s * 5.6, -15.9), (s * 5.6, 15.9), 0.7, 0.9, BOT - 0.45)
     # ring beam under the opening
     pg.revolve(g, "olm_steel", [(HOLE_R + 1.2, BOT), (HOLE_R + 0.9, BOT - 0.55), (HOLE_R, BOT - 0.55), (HOLE_R, BOT)], seg=64)
     # edge coping: a raised lip round the outer edge
@@ -136,7 +209,8 @@ def details_geo():
         pg.box(g, "dark_steel", [x, top + 0.95, z], [sx + 0.15, 0.1, sz + 0.15])
     for x in (-15.0, 15.0):
         for z in (-15.0, 15.0):
-            pg.box(g, "dark_steel", [x * 0.92, top + 0.2, z * 0.92], [1.0, 0.25, 1.0])
+            if deck_inside(x * 0.92, z * 0.92, 0.8):
+                pg.box(g, "dark_steel", [x * 0.92, top + 0.2, z * 0.92], [1.0, 0.25, 1.0])
     # ---- perimeter railing (open along the stair landings), posts every 2 m ----
     poly = deck_outline()
     for (x0, z0), (x1, z1) in zip(poly, poly[1:] + poly[:1]):
@@ -156,7 +230,7 @@ def details_geo():
 
 def columns_geo():
     g = Geo()
-    cs = [(x, z) for z in (-14.25, 14.25) for x in (-14.0, -5.0, 5.0, 14.0)]
+    cs = COLUMNS
     y0 = APRON_TOP
     y1 = BOT
     for (x, z) in cs:
@@ -171,18 +245,20 @@ def columns_geo():
                 pg.tubes(g, "dark_steel", _v(x + sa * 1.35, y0 + 0.6, z + sb * 1.35)[None], _v(x + sa * 1.35, y0 + 1.1, z + sb * 1.35)[None], 0.11, seg=6)
     # X bracing between adjacent columns in each row (two levels), members 0.7 box
     for z in (-14.25, 14.25):
-        xs = [-14.0, -5.0, 5.0, 14.0]
+        xs = [x for x in COL_XS if (x, z) in COLUMNS]
         for xa, xb in zip(xs[:-1], xs[1:]):
             for (ya, yb) in ((2.0, 9.0), (9.0, 16.0)):
                 pg.beams(g, "olm_column", _v(xa + 1.2, ya, z)[None], _v(xb - 1.2, yb, z)[None], 0.55, 0.7)
                 pg.beams(g, "olm_column", _v(xa + 1.2, yb, z)[None], _v(xb - 1.2, ya, z)[None], 0.55, 0.7)
             pg.beams(g, "olm_column", _v(xa + 1.2, 9.0, z)[None], _v(xb - 1.2, 9.0, z)[None], 0.9, 0.9)
-    # tie girders across the trench at x = +-9.5 (out of the plume path), mid height
+    # tie girders across the trench at x = +-9.5 (out of the plume path), mid height; the west one starts short of tower 2
     for x in (-9.5, 9.5):
-        pg.beams(g, "olm_column", _v(x, 11.0, -13.0)[None], _v(x, 11.0, 13.0)[None], 1.1, 1.3)
-        pg.beams(g, "olm_column", _v(x, 15.6, -13.0)[None], _v(x, 15.6, 13.0)[None], 0.8, 1.0)
-        for zz in np.linspace(-11.0, 11.0, 5):
-            pg.beams(g, "olm_column", _v(x, 11.0, zz)[None], _v(x, 15.6, zz + 2.75)[None], 0.4, 0.4)
+        z0 = -13.0 if x > 0 else -10.6
+        pg.beams(g, "olm_column", _v(x, 11.0, z0)[None], _v(x, 11.0, 13.0)[None], 1.1, 1.3)
+        pg.beams(g, "olm_column", _v(x, 15.6, z0)[None], _v(x, 15.6, 13.0)[None], 0.8, 1.0)
+        zs = np.linspace(z0 + 2.0, 11.0, 5)
+        for zz in zs:
+            pg.beams(g, "olm_column", _v(x, 11.0, zz)[None], _v(x, 15.6, zz + (zs[1] - zs[0]) / 2)[None], 0.4, 0.4)
     return g
 
 
@@ -190,15 +266,14 @@ def pipes_geo():
     """Deluge risers up the outer columns, the ring main under the deck, feed headers, nozzle stubs."""
     g = Geo()
     yr = BOT - 1.2
-    # ring main under the deck edge (square loop at +-15.2)
-    h = 15.2
-    loop = [(-h, -h), (h, -h), (h, h), (-h, h)]
+    # ring main under the deck edge: the deck outline inset by 1.8 m
+    loop = inset_poly(deck_outline(), 1.8)
     for (x0, z0), (x1, z1) in zip(loop, loop[1:] + loop[:1]):
         pg.tubes(g, "stainless", _v(x0, yr, z0)[None], _v(x1, yr, z1)[None], 0.55, seg=16)
     for (x, z) in loop:
         pg.spheres(g, "stainless", [[x, yr, z]], 0.62, seg=14, rings=8)
-    # risers on the outer sides of the four outer columns, with flanged joints
-    for (x, z) in ((-14.0, 14.25), (14.0, 14.25), (-14.0, -14.25), (14.0, -14.25)):
+    # risers on the outer sides of the outer columns, with flanged joints
+    for (x, z) in ((-14.0, 14.25), (14.0, 14.25), (14.0, -14.25)):
         sx = 1.0 if x > 0 else -1.0
         sz = 1.0 if z > 0 else -1.0
         px, pz = x + sx * 1.9, z + sz * 0.0
@@ -207,9 +282,11 @@ def pipes_geo():
             pg.tubes(g, "stainless", _v(px, yy, pz)[None], _v(px, yy + 0.2, pz)[None], 0.52, seg=14)
         pg.beams(g, "stainless", _v(px, yr, pz)[None], _v(x, yr, z)[None], 0.4, 0.3)
     # branch pipes from the ring main into the deck plate (cooling water feed), every 4 m along each side
+    h = 15.2
     for k in np.arange(-12.0, 12.1, 4.0):
         for (x, z, dx, dz) in ((k, -h, 0, 1), (k, h, 0, -1), (-h, k, 1, 0), (h, k, -1, 0)):
-            pg.tubes(g, "stainless", _v(x, yr, z)[None], _v(x + dx * 1.4, BOT - 0.2, z + dz * 1.4)[None], 0.16, seg=8)
+            if deck_inside(x, z, 1.6):      # only where the ring main runs (the cut NW corner has its own chamfer run)
+                pg.tubes(g, "stainless", _v(x, yr, z)[None], _v(x + dx * 1.4, BOT - 0.2, z + dz * 1.4)[None], 0.16, seg=8)
     return g
 
 

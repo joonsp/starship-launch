@@ -17,7 +17,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { AppContext, Collider, Hotspot, Module, QualitySettings } from '../contracts.ts';
-import { APRON, TRENCH_CUTOUT } from '../scene-config.ts';
+import { PAD_YAW, TRENCH_CUTOUT } from '../scene-config.ts';
 import { val, vec3 } from '../specs.ts';
 import { PadMaterials } from './materials.ts';
 
@@ -219,14 +219,15 @@ export class PadModule implements Module {
       id, position: p, contentKey: `edu.hotspot.${id}`, category: 'pad', priority,
     });
     const carriageY = val('pad.chopstick_carriage_height_in_photo');
+    /** Pad-local point (x along the trench axis) to world: rotation.y = PAD_YAW about the vehicle axis. */
+    const L = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).applyAxisAngle(THREE.Object3D.DEFAULT_UP, PAD_YAW);
     const list: Hotspot[] = [
       H('tower', new THREE.Vector3(T.x, 92, T.z), 8),
       H('chopsticks', new THREE.Vector3(0, carriageY + 2.5, -8), 8),
-      H('olm', new THREE.Vector3(17.5, val('scene.olm_deck_height') + 1.5, 0), 8),
-      H('trench', new THREE.Vector3(TRENCH_CUTOUT.halfX - 6, -3.5, 0), 7),
+      H('olm', L(17.5, val('scene.olm_deck_height') + 1.5, 0), 8),
+      H('trench', L(TRENCH_CUTOUT.halfX - 6, -3.5, 0), 7),
       H('tankfarm', new THREE.Vector3(196, 6, -85), 6),
     ];
-    void APRON;
     for (const h of list) ctx.hotspots.push(h);
   }
 }

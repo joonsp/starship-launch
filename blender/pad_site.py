@@ -11,6 +11,7 @@ import numpy as np
 
 import pad_geo as pg
 from pad_geo import Geo
+import pad_layout as L
 from pad_layout import APRON_TOP, OLM_HALF as OLM_H, P1_AXIS, P1_C, P1_H, P1_YAW, SITE
 
 
@@ -179,45 +180,76 @@ def pipeline_geo(lines):
     return g
 
 
+# GSE routing (all coordinates below marked LOCAL are pad-local and go through L.pad_to_world_xz; the object is built in
+# the WORLD frame because the tank-farm ends are OSM world positions).
+GSE_WORLD_TURN_X = -30.0            # world x where the three propellant lines turn from the tank farm run into the pad frame
+GSE_LINES = [                       # (material, radius, height at the tank end, LOCAL riser x, LOCAL riser z, top height, LOCAL vertical x, LOCAL target z)
+    ("pipe_insul", 0.36, 1.25, -19.0, -11.6, 21.4, -11.6, -3.2),
+    ("pipe_insul", 0.30, 1.90, -20.5, -10.1, 22.2, -12.9, 3.2),
+    ("galv", 0.16, 2.55, -22.0, -8.6, 20.55, -11.0, -8.6),
+]
+GSE_RUN_Z0 = -46.5                  # world z of the first propellant line on the long tank-farm run (1.6 m pitch)
+GSE_RUN_D = 1.6
+WATER_LOCAL = [(16.0, -66.0), (16.0, -14.4)]      # LOCAL path of the deluge water main (world start at the water tanks)
+WATER_START_WORLD = (52.0, -44.5)
+WATER_Y = 1.1
+
+
+def gse_riser_positions():
+    """World (x, z) of the three riser bases (colliders read this)."""
+    return [L.pad_to_world_xz(ln[3], ln[4]) for ln in GSE_LINES]
+
+
 def gse_geo():
     """Propellant + deluge feed lines from the tank farm / water tanks to the mount, on sleeper racks, plus the
-    north-west GSE risers up to the deck for the booster QDs (the trench is open, so the lines approach from the north
-    side and cross the deck top on posts)."""
+    north-west GSE risers up to the deck for the booster QDs. The long run keeps to world x (the tank farm is OSM world
+    geometry, and it clears the tower annex), turns at GSE_WORLD_TURN_X into the pad-local frame, comes round the
+    west side of tower 2 (tower footings stand at the deck's cut NW corner) and rises at the deck's west flank."""
+    import pad_olm as po
     g = Geo()
-    zN = -19.6                                  # riser base row, just beyond the deck's north edge
-    runs = [
-        ("pipe_insul", 0.36, 1.25, [(148.2, -40.0), (-19.0, -40.6), (-19.0, zN)]),
-        ("pipe_insul", 0.30, 1.90, [(148.2, -41.6), (-20.5, -42.2), (-20.5, zN)]),
-        ("galv", 0.16, 2.55, [(148.2, -43.0), (-22.0, -43.6), (-22.0, zN)]),
-        ("stainless", 0.55, 1.1, [(52.0, -44.5), (25.0, -44.5), (25.0, -20.0), (16.5, -20.0), (16.5, -14.6)]),
-    ]
-    for mat, r, y, pts in runs:
-        for a, b in zip(pts[:-1], pts[1:]):
+    W = L.pad_to_world_xz
+
+    def run(mat, r, y, pts_world, y_end=None):
+        for a, b in zip(pts_world[:-1], pts_world[1:]):
             pg.tubes(g, mat, _v(a[0], y, a[1])[None], _v(b[0], y, b[1])[None], r, seg=14)
-        for p in pts[1:-1]:
+        for p in pts_world[1:-1]:
             pg.spheres(g, mat, [[p[0], y, p[1]]], r * 1.02, seg=14, rings=8)
-    # H-frame sleepers every 9 m along the long x run of the three propellant lines
-    for x in np.arange(-22.0, 146.0, 9.0):
-        z = -40.6 - 0.5 - (x - 20.0) * (0.0)
-        pg.box(g, "galv", [x, 1.4, -42.0 - 1.9], [0.25, 2.8, 0.25])
-        pg.box(g, "galv", [x, 1.4, -42.0 + 1.6], [0.25, 2.8, 0.25])
-        pg.box(g, "galv", [x, 2.75, -42.0 - 0.15], [0.3, 0.2, 3.9])
-    # risers from the ground to the deck edge, then across the deck on posts to the QD carriages / valve stand
-    targets = {0: (-10.5, 21.4, -3.2), 1: (-10.5, 22.2, 3.2), 2: (-14.0, 20.9, -11.0)}
-    for k, (mat, r, x, y0) in enumerate((("pipe_insul", 0.36, -19.0, 1.25), ("pipe_insul", 0.30, -20.5, 1.9), ("galv", 0.16, -22.0, 2.55))):
-        top = targets[k][1]
-        pg.tubes(g, mat, _v(x, y0, zN)[None], _v(x, top, zN)[None], r, seg=14)
+
+    for k, (mat, r, y, xr, zh, top, vx, tz) in enumerate(GSE_LINES):
+        zw = GSE_RUN_Z0 - GSE_RUN_D * k
+        jx, jz = L.world_to_pad_xz(GSE_WORLD_TURN_X, zw)
+        pts = [(148.2, -40.0 - GSE_RUN_D * k), (128.0, zw), (GSE_WORLD_TURN_X, zw), W(jx, zh), W(xr, zh)]
+        run(mat, r, y, pts)
+        # riser to the deck height, turn east along the pad-local x, then onto the deck
+        rx, rz = W(xr, zh)
+        pg.tubes(g, mat, _v(rx, y, rz)[None], _v(rx, top, rz)[None], r, seg=14)
         for yy in np.arange(2.5, top - 1.0, 3.0):
-            pg.box(g, "dark_steel", [x, yy, zN], [r * 2 + 0.25, 0.12, r * 2 + 0.25])
-        pg.spheres(g, mat, [[x, top, zN]], r * 1.05, seg=12, rings=8)
-        tx, ty, tz = targets[k]
-        pg.tubes(g, mat, _v(x, top, zN)[None], _v(tx, top, zN + 0.0)[None], r, seg=12) if abs(x - tx) > 0.1 else None
-        pg.tubes(g, mat, _v(tx, top, zN)[None], _v(tx, top, tz)[None], r, seg=12)
-        pg.spheres(g, mat, [[tx, top, zN]], r * 1.05, seg=12, rings=8)
-        # posts across the deck
-        for zz in np.arange(zN + 3.0, tz, 4.0):
-            if zz > -OLM_H:
-                pg.box(g, "dark_steel", [tx, (top + 20.0) / 2, zz], [0.25, top - 20.0, 0.25])
+            pg.box(g, "dark_steel", [rx, yy, rz], [r * 2 + 0.25, 0.12, r * 2 + 0.25], pg.rot_y(L.PAD_YAW))
+        pg.spheres(g, mat, [[rx, top, rz]], r * 1.05, seg=12, rings=8)
+        legs = [(xr, zh), (vx, zh)] + ([(vx, tz), (-10.5, tz)] if abs(tz - zh) > 0.1 else [(-10.5, zh)])
+        wl = [W(*p) for p in legs]
+        for a, b in zip(wl[:-1], wl[1:]):
+            pg.tubes(g, mat, _v(a[0], top, a[1])[None], _v(b[0], top, b[1])[None], r, seg=12)
+        for p in wl[1:-1]:
+            pg.spheres(g, mat, [[p[0], top, p[1]]], r * 1.05, seg=12, rings=8)
+        # posts on the deck under each leg
+        for a, b in zip(legs[:-1], legs[1:]):
+            n = max(int(math.hypot(b[0] - a[0], b[1] - a[1]) // 4.0), 1)
+            for t in np.linspace(0, 1, n + 1):
+                x, z = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+                if po.deck_inside(x, z, 0.6):
+                    wx, wz = W(x, z)
+                    pg.box(g, "dark_steel", [wx, (top + 20.0) / 2, wz], [0.25, top - 20.0 - r, 0.25], pg.rot_y(L.PAD_YAW))
+    # H-frame sleepers every 9 m along the long run (world x aligned), under the three lines
+    zc = GSE_RUN_Z0 - GSE_RUN_D
+    for x in np.arange(GSE_WORLD_TURN_X + 2.0, 128.0, 9.0):
+        pg.box(g, "galv", [x, 1.4, zc - 2.3], [0.25, 2.8, 0.25])
+        pg.box(g, "galv", [x, 1.4, zc + 2.3], [0.25, 2.8, 0.25])
+        pg.box(g, "galv", [x, 2.75, zc], [0.3, 0.2, 4.9])
+    # the deluge water main: tank end (world) -> local +z along x = 18.5 to the north catwalk end
+    w0 = WATER_START_WORLD
+    wp = [w0, W(*WATER_LOCAL[0])] + [W(*p) for p in WATER_LOCAL[1:]]
+    run("stainless", 0.55, WATER_Y, wp)
     return g
 
 

@@ -112,6 +112,17 @@ def col_box(cid, centre, size, rot=0.0):
                           size=[round(float(s), 3) for s in size], rotationY=round(float(math.radians(rot)), 5)))
 
 
+def col_local(cid, centre, size, rot=0.0):
+    """Box given in the PAD-LOCAL frame: centre rotated into world by PAD_YAW, box yaw = PAD_YAW + rot (degrees)."""
+    x, z = L.pad_to_world_xz(centre[0], centre[2])
+    col_box(cid, (x, centre[1], z), size, L.PAD_YAW + rot)
+
+
+def col_cyl_local(cid, centre, r, h):
+    x, z = L.pad_to_world_xz(centre[0], centre[2])
+    col_cyl(cid, (x, centre[1], z), r, h)
+
+
 def col_cyl(cid, centre, r, h):
     colliders.append(dict(id=cid, kind="cylinder", centre=[round(float(c), 3) for c in centre], radius=round(float(r), 3),
                           height=round(float(h), 3)))
@@ -160,13 +171,13 @@ def main():
 
     # ---------------------------------------------------------------- OLM
     for name, geo in po.build().items():
-        add_object(name, geo)
-    add_object("olm_platforms", pe.olm_platforms())
+        add_object(name, geo, yaw_deg=L.PAD_YAW)
+    add_object("olm_platforms", pe.olm_platforms(), yaw_deg=L.PAD_YAW)
     lap("olm")
     # ---------------------------------------------------------------- trench, apron
     for name, geo in ptr.build().items():
-        add_object(name, geo)
-    add_object("apron_props", pe.apron_props())
+        add_object(name, geo, yaw_deg=L.PAD_YAW)
+    add_object("apron_props", pe.apron_props(), yaw_deg=L.PAD_YAW)
     lap("trench + apron")
 
     # ---------------------------------------------------------------- tanks
@@ -219,16 +230,17 @@ def main():
     for k, (loc, size) in enumerate((((-0.2, 5.25, -9.0), (12.0, 10.5, 5.8)), ((-8.6, 5.25, -0.3), (5.6, 10.5, 11.0)))):
         p = L.tower_to_world([loc])[0]
         col_box(f"tower2_annex_{k}", (p[0], loc[1], p[2]), size, L.TOWER_YAW)
-    for k, (x, z) in enumerate([(x, z) for z in (-14.25, 14.25) for x in (-14.0, -5.0, 5.0, 14.0)]):
-        col_box(f"olm_column_{k}", (x, 10.0, z), (2.6, 20.0, 2.6))
-    fx, fz = 48.0, 25.0
-    col_box("trench_fence_n", (0, 0.65, -fz), (2 * fx, 1.3, 0.25))
-    col_box("trench_fence_s", (0, 0.65, fz), (2 * fx, 1.3, 0.25))
-    col_box("trench_fence_e", (fx, 0.65, 0), (0.25, 1.3, 2 * fz))
-    col_box("trench_fence_w", (-fx, 0.65, 0), (0.25, 1.3, 2 * fz))
-    col_box("olm_stair_base", (8.0, 10.0, 20.0), (6.6, 20.0, 2.0))
-    for k, (x, z) in enumerate(((-82.0, -60.0), (82.0, -60.0), (-82.0, 60.0), (82.0, 60.0), (-45.0, -62.0), (45.0, 62.0))):
-        col_cyl(f"lightpole_{k}", (x, 8.0, z), 0.7, 16.0)
+    for k, (x, z) in enumerate(po.COLUMNS):
+        col_local(f"olm_column_{k}", (x, 10.0, z), (2.6, 20.0, 2.6))
+    # guard fence round the trench / mount enclosure (segments as built, with the gaps for tower 2 and the pipe crossings)
+    for k, ((x0, z0), (x1, z1)) in enumerate(ptr.fence_runs()):
+        cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
+        ln = math.hypot(x1 - x0, z1 - z0)
+        size = (ln, 1.3, 0.25) if abs(z1 - z0) < 1e-6 else (0.25, 1.3, ln)
+        col_local(f"trench_fence_{k}", (cx, 0.65, cz), size)
+    col_local("olm_stair_base", (8.0, 10.0, 20.0), (6.6, 20.0, 2.0))
+    for k, (x, z) in enumerate(ptr.LIGHT_POLES):
+        col_cyl_local(f"lightpole_{k}", (x, 8.0, z), 0.7, 16.0)
     for k, (a, b) in enumerate(((-1, -1), (1, -1), (1, 1), (-1, 1))):
         p = L.tower_to_world([[a * hw, 0, b * hw]], L.P1_C, L.P1_YAW)[0]
         col_box(f"tower1_footing_{k}", (p[0], 0.6, p[2]), (3.6, 1.8, 3.6), L.P1_YAW)
@@ -237,10 +249,13 @@ def main():
         a = math.radians(k * 60 + 15)
         col_cyl(f"pad1_leg_{k}", (L.P1_AXIS[0] + 12.0 * math.cos(a), 8.0, L.P1_AXIS[2] - 12.0 * math.sin(a)), 1.4, 16.0)
     # GSE riser posts + pipe rack ends
-    for k, x in enumerate((-19.0, -20.5, -22.0)):
-        col_cyl(f"gse_riser_{k}", (x, 10.0, -19.6), 0.5, 20.0)
-    col_box("gse_rack_north", (60.0, 1.3, -42.0), (170.0, 2.6, 4.0))
-    col_box("gse_water_main", (25.0, 0.7, -32.0), (1.6, 1.4, 25.0))
+    for k, (x, z) in enumerate(ps.gse_riser_positions()):
+        col_cyl(f"gse_riser_{k}", (x, 10.0, z), 0.5, 20.0)
+    zc = ps.GSE_RUN_Z0 - ps.GSE_RUN_D
+    x0, x1 = ps.GSE_WORLD_TURN_X, 128.0
+    col_box("gse_rack_north", ((x0 + x1) / 2, 1.3, zc), (x1 - x0, 2.6, 5.5))
+    (wx0, wz0), (wx1, wz1) = ps.WATER_LOCAL
+    col_local("gse_water_main", (wx0, 0.7, (wz0 + wz1) / 2), (1.6, 1.4, abs(wz1 - wz0)))
     lap(f"colliders: {len(colliders)}")
 
     # ---------------------------------------------------------------- outputs
