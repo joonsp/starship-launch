@@ -23,6 +23,8 @@ import fragOccupancy from './shaders/occupancy.frag.glsl?raw';
 import fragLight from './shaders/light.frag.glsl?raw';
 
 export const OCC_BLOCK = 4;
+/** Rising steam mixes with air: density x mix(1, z, smoothstep(x, y, height)) in the bake (the march undoes it to erode). */
+export const DILUTION = new THREE.Vector3(110, 360, 0.5);
 
 export interface LightBakeInputs {
   sunDir: THREE.Vector3;          // toward the sun
@@ -123,7 +125,7 @@ export class VolumeBaker {
       blendSrcAlpha: THREE.OneFactor,
       blendDstAlpha: THREE.OneFactor,
     });
-    this.mFinal = mat(fragFinalize, { uSplat: { value: null }, uLayer: { value: 0 }, uRes: { value: new THREE.Vector3() }, uBoxMin: boxMin, uBoxSize: boxSize, uFaceFade: { value: 14 }, uDilution: { value: new THREE.Vector3(110, 360, 0.5) } });
+    this.mFinal = mat(fragFinalize, { uSplat: { value: null }, uLayer: { value: 0 }, uRes: { value: new THREE.Vector3() }, uBoxMin: boxMin, uBoxSize: boxSize, uFaceFade: { value: 14 }, uDilution: { value: DILUTION } });
     this.mOcc = mat(fragOccupancy, { uDensity: { value: null }, uLayer: { value: 0 }, uBlock: { value: OCC_BLOCK } });
     this.mLight = mat(fragLight, {
       uDensity: { value: null }, uLayer: { value: 0 }, uRes: { value: new THREE.Vector3() },

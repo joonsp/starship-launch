@@ -4,9 +4,14 @@
 //                                              depthRef = opaque view depth of pixel q (m)
 // Model (see research/rendering.md section 2):
 //   density  = baked puff field (R) eroded by tileable Perlin-Worley + Worley detail noise
-//   sun      = baked optical depth -> Wrenninge octaves x dual-lobe Henyey-Greenstein x Beer-powder
-//   ambient  = blue sky from above + warm ground bounce, via baked hemisphere visibilities
-//   plume    = baked line-light irradiance (x globals.uPlumeLight) + baked fireball irradiance
+//   sun      = baked optical depth -> Wrenninge octaves x dual-lobe Henyey-Greenstein x Beer-powder,
+//              + slab-diffusion transmission ~1/(1 + 0.75 (1 - g) tau) (the glow of backlit edges),
+//              reddened by a fine aerosol (in the cloud, and in the boundary-layer haze for a low sun)
+//   ambient  = blue sky from above + ground bounce (the ground under the cloud is shaded in the bake),
+//              via baked hemisphere visibilities, split per sample by the density-gradient normal and
+//              occluded by near/mid-field taps; dusty, lower-albedo steam near the ground
+//   plume    = baked line-light irradiance (x globals.uPlumeLight) + baked fireball / outflow irradiance
+//              (ballistic + diffusion transport), with a directional relief toward the fire
 //   emission = blackbody of the temperature channel (fireball / hot gas)
 //   integration: Hillaire 2015 energy-conserving  L += T * (S - S*exp(-st*dt)) / st
 // Stops at the opaque depth; empty-space skipping via a max-density occupancy volume; R2 + golden-
@@ -73,7 +78,9 @@ uniform vec4 uRedden;     // rgb = extra (chromatic) extinction per unit sun opt
                           // depth of the same aerosol in the hazy boundary layer at the ground (scale height 250 m)
 uniform vec4 uDust;       // rgb = single-scattering albedo tint of the ground-hugging (dusty) steam, w = blend height (m)
 uniform float uSkyOcc;    // weight of the near-field (detailed-density) sky occlusion
-uniform vec2 uSunDiff;    // diffuse (slab-diffusion) sun transmission: strength, absorption per optical depth
+uniform vec3 uSunDiff;    // diffuse (slab-diffusion) sun transmission: strength, absorption per optical depth;
+                          // z = share of the aerosol inside the cloud itself (vs the boundary-layer haze)
+uniform vec3 uDilution;   // (y0, y1, factor at y1): the bake's dilution of rising steam with height
 uniform float uNormalAmb; // 0..1: how much the density-gradient normal splits the ambient into sky (up) / ground (down)
 
 in vec2 vUv;
@@ -123,9 +130,16 @@ vec2 medium(vec3 p, float t, out vec3 uvw) {
   // drift: billow growth about the mount (density space) and noise advection (noise space)
   vec3 pd = p / uGrowth;
   uvw = (pd - uBoxMin) / uBoxSize;
-  vec2 base = texture(uDensity, uvw + gStoch * uStochAmp * uDensTexel).rg;
+  // (the stochastic filter widens with height: the old, mixed tops read as broad lobes instead of the
+  //  bead-like cluster of their authoring puffs; the accumulation integrates it into a smooth blur)
+  float stochW = mix(uStochAmp, 1.2, smoothstep(140.0, 320.0, p.y));
+  vec2 base = texture(uDensity, uvw + gStoch * stochW * uDensTexel).rg;
   gBase = base.r;
   if (base.r < 0.004) return vec2(0.0, base.g);
+  // The bake dilutes rising steam with height (finalize.frag.glsl). Erode the UNDILUTED field and dilute
+  // afterwards: eroding the thinned field would leave only the Worley cell cores of the high tops (beads).
+  float dil = mix(1.0, uDilution.z, smoothstep(uDilution.x, uDilution.y, pd.y));
+  base.r = min(base.r / dil, 1.0);
   vec3 pn = p - uDriftOffset;
   // 1. large-scale Perlin-Worley shape erosion (keeps cores, carves the mass boundaries)
   // (noise lookups also get the stochastic sub-texel offset: trilinear facets of the 128^3 / 32^3
@@ -137,12 +151,14 @@ vec2 medium(vec3 p, float t, out vec3 uvw) {
   // 2. cauliflower erosion: carve along Worley cell boundaries (F1 large) so the surface follows
   //    round cells at 3 scales; wispy (inverse) inside the low ground roll
   vec4 e = texture(uDetail, pn * uDetailP.y + gStoch.zxy * (1.0 / 32.0));
-  float ef = e.r * 0.625 + e.g * 0.25 + e.b * 0.125;
+  float ef = e.r * 0.5 + e.g * 0.3 + e.b * 0.2;      // (finer octaves weighted up: small cauliflower bumps)
   float billow = clamp((p.y - 6.0) / 30.0, 0.0, 1.0);
   float det = mix(ef, 1.0 - ef, billow);
   d = remap01(d, det * uDetailP.x);
   // 3. crisp surface: dense steam goes from clear air to opaque within a metre or two
-  d = clamp(d * uDetailP.z, 0.0, 1.0);
+  //    (the old, diluted steam of the high tops has mixed with air: softer, rounder lobes, not beads)
+  float crisp = mix(uDetailP.z, max(1.5, uDetailP.z * 0.35), smoothstep(170.0, 380.0, p.y));
+  d = clamp(d * crisp, 0.0, 1.0) * dil;
   // 4. rim wisps from a finer octave, only where the density is still thin
   vec4 e2 = texture(uDetail, pn * uDetailP.y * 3.7 + 0.31 + gStoch.yzx * (1.0 / 32.0));
   d = remap01(d, (1.0 - e2.r) * ((uFlags & 16) != 0 ? 0.0 : 0.2) * (1.0 - d));
@@ -295,7 +311,7 @@ void main() {
           // mid-field: one coarse tap ~16 m out on the base density (a lump under a bigger billow,
           // the base of a bank under its own overhang)
           float upB = texture(uDensity, ((p + oDir * (16.0 + gStoch.x * 6.0) + gStoch.zyx * 6.0) / uGrowth - uBoxMin) / uBoxSize).r;
-          float occ = mix(1.0, exp(-upD * uSigma * 4.0) * exp(-upB * uSigma * 8.0), (uFlags & 8) != 0 ? 0.0 : uSkyOcc);
+          float occ = mix(1.0, exp(-upD * uSigma * 7.0) * exp(-upB * uSigma * 8.0), (uFlags & 8) != 0 ? 0.0 : uSkyOcc);
           skyV *= occ * skyF;
           float gv = texture(uLightB, uvwV).r * gndF * mix(1.0, occ, 0.5);
           // sun optical depth: near field marched on the DETAILED density (crisp self-shadowing of
@@ -324,7 +340,7 @@ void main() {
           //  a slant path ~1/sin(elevation) through it, so the effect vanishes for a high sun)
           float tauHaze = uRedden.w * exp(-max(p.y, 0.0) / 250.0) / max(uSunDir.y, 0.08);
           // (the in-cloud reddening path is capped: deep, multiply scattered light turns amber, not red)
-          vec3 sunL = sunS * (clay ? vec3(1.0) : exp(-(min(tauS, 3.0) + tauHaze) * uRedden.rgb));
+          vec3 sunL = sunS * (clay ? vec3(1.0) : exp(-(min(tauS, 2.5) * uSunDiff.z + tauHaze) * uRedden.rgb));
           // Beer-powder: in-scatter probability darkens thin sun-facing rims (not toward the sun)
           float powder = 1.0 - exp(-2.0 * tauS - m.x * uSigma * 12.0);
           sunL *= mix(1.0, powder, powderMix);
@@ -345,6 +361,8 @@ void main() {
           else if (uLightDebug == 5) inS = vec3(LA.a);
           else if (uLightDebug == 6) inS = vec3(gv);
           else if (uLightDebug == 7) inS = vec3(exp(-tauS));
+          else if (uLightDebug == 8) inS = vec3(skyV, occ, skyF * 0.5);
+          else if (uLightDebug == 9) inS = vec3(gv, texture(uLightB, uvwV).r, gndF * 0.5);
           // hot combustion gas is emissive and absorbing (low albedo), not a water-droplet
           // scatterer: without this the fireball scatters its own light and reads white, not orange
           float hot = smoothstep(0.08, 0.35, m.y);

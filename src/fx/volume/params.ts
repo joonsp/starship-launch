@@ -49,6 +49,8 @@ export interface VolumeParams {
    * (scale height 250 m). The sun's slant path through it is ~1/sin(elevation): amber at sunrise, nothing at noon.
    */
   reddenHaze: number;
+  /** Share (0..1) of that aerosol mixed into the cloud itself (reddens deep, multiply scattered light at any sun height). */
+  reddenCloud: number;
   /** Albedo tint of the ground-hugging, dust-laden steam (rgb) and the height (m) over which it fades out. */
   dustR: number;
   dustG: number;
@@ -93,8 +95,8 @@ export const DEFAULT_PARAMS: VolumeParams = {
   msB: 0.35,
   msC: 0.55,
   powder: 0.5,
-  sunGain: 11,
-  ambientGain: 0.8,
+  sunGain: 9,
+  ambientGain: 1.2,
   plumeGain: 26,
   emissionGain: 0.6,
   fireLightGain: 30,
@@ -104,20 +106,21 @@ export const DEFAULT_PARAMS: VolumeParams = {
   reddenR: 0.0,
   reddenG: 0.2,
   reddenB: 0.55,
-  reddenHaze: 0.12,
-  dustR: 0.55,
-  dustG: 0.44,
-  dustB: 0.38,
-  dustHeight: 60,
-  skyOcclusion: 0.85,
+  reddenHaze: 0.36,
+  reddenCloud: 0.45,
+  dustR: 0.5,
+  dustG: 0.46,
+  dustB: 0.43,
+  dustHeight: 55,
+  skyOcclusion: 0.8,
   normalAmbient: 0.6,
-  sunDiffuse: 0,
-  sunAbsorb: 0.025,
+  sunDiffuse: 0.8,
+  sunAbsorb: 0.035,
   shapeAmount: 0.3,
   shapeScale: 300,
-  detailAmount: 0.75,
-  detailScale: 22,
-  crisp: 5,
+  detailAmount: 0.85,
+  detailScale: 18,
+  crisp: 12,
   nearFade: 6,
   maxFrames: 128,
   windX: 1.6,

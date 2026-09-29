@@ -6,9 +6,12 @@
 //  Level 0 (L0): hand-placed masses (radius 25-80 m) matched to the reference photo from the
 //     calibrated photo camera. They are authored in PHOTO space, (u px, depth m, height m, r m),
 //     because that is how they were fitted; buildPuffs() converts them to world metres with the
-//     photo camera frame. Physically they form the two wall-jet banks leaving the east-west
-//     trench (west = left mass, east = right mass, which spreads SE toward the camera), plus a
-//     low ground roll all around the mount and the hot fireball at the deflector.
+//     photo camera frame. Physically they form the two wall-jet banks leaving the ESE-WNW flame
+//     trench (bearing 123 deg; WNW = left mass, ESE = right mass, which spreads SE toward the camera
+//     and fans out NE behind), plus a low ground roll all around the mount.
+//     The fireball, the rising fire-lit steam at the plume foot and the ground jets along the trench
+//     are authored in PAD-LOCAL metres along the trench axis (FIRE_SPECS / FOOT_SPECS / JET_SPECS),
+//     so they follow scene-config PAD_YAW rather than the photo.
 //  Level 1: 7-14 children on each L0's outward/upper shell, r = 0.28-0.45 * parent.
 //  Level 2: 5-8 children on each L1's outward shell, r = 0.30-0.45 * parent.
 //  Each puff's radius is warped per direction by fBm on the GPU (see shaders/splat.frag.glsl),
@@ -140,19 +143,26 @@ export const L0_SPECS: L0Spec[] = [
   { u: 1420, d: 515, h: 26, r: 36, g: 'E' },
   { u: 1545, d: 525, h: 24, r: 36, g: 'E' },
   { u: 1350, d: 600, h: 72, r: 58, g: 'E' },
-  { u: 1515, d: 615, h: 78, r: 56, g: 'E' },
+  // (the far-right masses sit deep, NE of the front: pushed back along their photo rays, which keeps the
+  //  silhouette, so the bank's sun-side edge stays open to the low sun and can glow amber as in the photo)
+  { u: 1515, d: 765, h: 71, r: 70, g: 'E' },
   { u: 1290, d: 650, h: 130, r: 55, g: 'E' },
   { u: 1325, d: 700, h: 235, r: 52, g: 'E' },
   { u: 1432, d: 690, h: 232, r: 46, g: 'E' },            // tall lobe (top ~y 245)
   { u: 1390, d: 650, h: 188, r: 58, g: 'E' },
   { u: 1465, d: 640, h: 125, r: 60, g: 'E' },
-  { u: 1575, d: 640, h: 128, r: 55, g: 'E' },
+  { u: 1575, d: 790, h: 133, r: 68, g: 'E' },
   { u: 1522, d: 700, h: 312, r: 58, g: 'E' },            // orange sunlit top (y ~90-150)
-  { u: 1600, d: 700, h: 306, r: 64, g: 'E' },
-  { u: 1665, d: 690, h: 212, r: 50, g: 'E' },
+  { u: 1600, d: 850, h: 349, r: 78, g: 'E' },
+  { u: 1665, d: 810, h: 231, r: 59, g: 'E' },
   { u: 1560, d: 680, h: 225, r: 62, g: 'E' },
   { u: 1655, d: 660, h: 205, r: 58, g: 'E' },
-  { u: 1640, d: 640, h: 120, r: 50, g: 'E' },
+  { u: 1640, d: 790, h: 124, r: 62, g: 'E' },
+  // bridges that tie the deep far-right masses to the rest of the bank (hidden inside the photo silhouette,
+  // clear of the sun paths to the sun-side edge); appended last so the other billows keep their random layout
+  { u: 1464, d: 719, h: 98, r: 48, g: 'E' },
+  { u: 1602, d: 732, h: 170, r: 50, g: 'E' },
+  { u: 1594, d: 794, h: 260, r: 50, g: 'E' },
 ];
 
 // ── Fireball and trench outflow, authored in PAD-LOCAL metres along the flame trench ─────────
@@ -168,12 +178,13 @@ export interface FireSpec { lx: number; lz: number; h: number; r: number; t: num
 export const FIRE_SPECS: FireSpec[] = [
   { lx: 8, lz: 0, h: 26, r: 20, t: 1.0, k: 0.4 },      // deflector fireball round the plume foot
   { lx: 26, lz: 2, h: 20, r: 22, t: 0.95, k: 0.4 },    // spilling toward the ESE trench exit
-  { lx: 42, lz: 0, h: 14, r: 20, t: 0.85, k: 0.45 },   // ESE exit (the photo's bright core, right of the column)
-  { lx: -10, lz: 0, h: 18, r: 18, t: 0.8, k: 0.45 },   // behind the tower base
-  { lx: -38, lz: 0, h: 12, r: 18, t: 0.7, k: 0.5 },    // WNW exit (hidden by the ground roll from the photo camera)
-  { lx: 64, lz: 2, h: 12, r: 20, t: 0.6, k: 0.55 },    // ESE outflow over the apron
-  { lx: 92, lz: 6, h: 10, r: 18, t: 0.4, k: 0.65 },
-  { lx: -64, lz: -2, h: 10, r: 18, t: 0.45, k: 0.6 },  // WNW outflow
+  // (the exhaust cools fast once it leaves the deflector: yellow-white core, deep-orange sheath)
+  { lx: 42, lz: 0, h: 14, r: 20, t: 0.72, k: 0.45 },   // ESE exit (right of the column in the photo)
+  { lx: -10, lz: 0, h: 18, r: 18, t: 0.75, k: 0.45 },  // behind the tower base
+  { lx: -38, lz: 0, h: 12, r: 18, t: 0.6, k: 0.5 },    // WNW exit (hidden by the ground roll from the photo camera)
+  { lx: 64, lz: 2, h: 12, r: 20, t: 0.5, k: 0.55 },    // ESE outflow over the apron
+  { lx: 92, lz: 6, h: 10, r: 18, t: 0.32, k: 0.65 },
+  { lx: -64, lz: -2, h: 10, r: 18, t: 0.38, k: 0.6 },  // WNW outflow
 ];
 
 /**
@@ -181,8 +192,8 @@ export const FIRE_SPECS: FireSpec[] = [
  * not flame. Normal L0 masses with a warm (sub-emissive) temperature, in pad-local metres.
  */
 export const FOOT_SPECS: FireSpec[] = [
-  { lx: -12, lz: -6, h: 48, r: 18, t: 0.12, k: 0.35 },
-  { lx: 20, lz: -8, h: 44, r: 18, t: 0.12, k: 0.3 },
+  { lx: -12, lz: -6, h: 48, r: 18, t: 0.2, k: 0.4 },
+  { lx: 20, lz: -8, h: 44, r: 18, t: 0.2, k: 0.36 },
 ];
 
 /**
@@ -193,8 +204,8 @@ export const FOOT_SPECS: FireSpec[] = [
  * glow along the ground into the base of each bank. Pad-local metres; t = warm near the trench.
  */
 export const JET_SPECS: FireSpec[] = [
-  { lx: 58, lz: 4, h: 18, r: 24, t: 0.18, k: 0.8 },
-  { lx: 96, lz: -8, h: 22, r: 30, t: 0.1, k: 0.9 },
+  { lx: 78, lz: 4, h: 18, r: 24, t: 0.18, k: 0.8 },     // (starts past the ESE exit: the fire there stays visible)
+  { lx: 112, lz: -8, h: 22, r: 30, t: 0.1, k: 0.9 },
   { lx: 145, lz: 14, h: 26, r: 34, t: 0.04, k: 1 },
   { lx: 205, lz: 22, h: 28, r: 36, t: 0, k: 1 },
   { lx: 270, lz: 30, h: 30, r: 36, t: 0, k: 1 },
@@ -211,12 +222,12 @@ export const JET_SPECS: FireSpec[] = [
  * Light sources only (no density), pad-local metres along the trench axis, plus a relative power w.
  */
 export const GLOW_SPECS: { lx: number; lz: number; h: number; r: number; w: number }[] = [
-  { lx: -70, lz: 0, h: 6, r: 22, w: 0.45 },    // WNW outflow
-  { lx: -125, lz: -4, h: 8, r: 26, w: 0.3 },
-  { lx: -190, lz: -8, h: 8, r: 28, w: 0.12 },
-  { lx: 72, lz: -6, h: 6, r: 22, w: 0.2 },     // ESE outflow (the near part is mostly seen through the fireball)
-  { lx: 128, lz: 4, h: 8, r: 26, w: 0.42 },
-  { lx: 195, lz: 12, h: 8, r: 28, w: 0.28 },
+  { lx: -70, lz: 0, h: 6, r: 22, w: 0.5 },     // WNW outflow (lights the W bank's inner face and base)
+  { lx: -125, lz: -4, h: 8, r: 26, w: 0.45 },
+  { lx: -190, lz: -8, h: 8, r: 28, w: 0.3 },
+  { lx: 72, lz: -6, h: 6, r: 22, w: 0.12 },    // ESE outflow (the near part is mostly seen through the fireball)
+  { lx: 128, lz: 4, h: 8, r: 26, w: 0.26 },
+  { lx: 195, lz: 12, h: 8, r: 28, w: 0.22 },
 ];
 
 /** Default pad yaw (three.js rotation.y, rad) = scene-config PAD_YAW (spec scene.trench_yaw, -33.1 deg). */
@@ -251,10 +262,11 @@ interface Mass { c: Vec3; r: number; g: L0Spec['g']; t: number; k: number }
 
 /**
  * Build the full puff list in world space. Deterministic for a given seed.
- * Typical count: ~50 L0, ~500 L1, ~3000 L2.
+ * Typical count: ~75 L0, ~700 L1, ~4700 L2.
  * Order: the photo-fitted banks and ground roll (L0_SPECS), then the fireball (FIRE_SPECS), the
- * fire-lit steam round the plume foot (FOOT_SPECS) and the ground jets along the trench (JET_SPECS). The fire masses use their own random stream, so
- * editing them never reshuffles the billows of the photo-fitted banks.
+ * fire-lit steam round the plume foot (FOOT_SPECS) and the ground jets along the trench (JET_SPECS).
+ * The pad-local masses use their own random stream, so editing them never reshuffles the billows of
+ * the photo-fitted banks.
  */
 export function buildPuffs(fr: PhotoFrame, opts: BuildOptions = {}): Puff[] {
   const seed = opts.seed ?? 1337;
