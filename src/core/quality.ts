@@ -5,7 +5,7 @@
 //  2. FrameProbe: after load, a short frame-time probe (median rAF interval over ~60 frames while the clouds are
 //     still marching, i.e. the expensive state) steps the level DOWN if the frame rate is clearly too low. It never
 //     steps up: rAF is vsync-capped, so a fast GPU looks the same as a just-fast-enough one.
-// The design target is 60 fps at 'high' on an AMD Radeon 8060S iGPU at 1080p.
+// The design target is 60 fps at 'high' on an AMD Radeon 8060S iGPU (measured: 93 fps worst case at 2560x1440).
 import type * as THREE from 'three';
 import type { QualityId } from '../contracts.ts';
 
@@ -48,8 +48,10 @@ export function classifyGpu(gpu: string, coarse = false, small = false): GpuGues
   // Apple silicon (ANGLE Metal reports "Apple M2 Pro")
   if (/apple m\d+\s*(pro|max|ultra)/.test(g)) return pick('high', 'Apple silicon Pro/Max');
   if (/apple m\d+/.test(g)) return pick('medium', 'Apple silicon');
-  // AMD APUs: RDNA 3.5 Strix Halo (8060S / 8050S) is the design target for 'high'
-  if (/8060s|8050s|8040s/.test(g)) return pick('high', 'Strix Halo iGPU (design target)');
+  // AMD APUs: RDNA 3.5 Strix Halo. Measured on a Radeon 8060S at 2560x1440 (scripts/qa-gpu-bench.mjs, 2026-09-29,
+  // after polish round 3): high 93 fps / ultra 52 fps with the camera moving every frame; both ~210 fps converged.
+  // 'high' keeps orbiting above 60 fps; users can pick 'ultra' for stills (it converges to the same idle cost).
+  if (/8060s|8050s|8040s/.test(g)) return pick('high', 'Strix Halo iGPU (measured)');
   if (/890m|880m|780m|760m/.test(g)) return pick('medium', 'RDNA 3 iGPU');
   if (/radeon|vega/.test(g)) return pick('low', 'older AMD iGPU');
   // Intel integrated
