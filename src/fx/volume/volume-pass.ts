@@ -24,7 +24,7 @@ import fragMarch from './shaders/march.frag.glsl?raw';
 import fragScatter from './shaders/scatter.frag.glsl?raw';
 import fragComposite from './shaders/composite.frag.glsl?raw';
 import fragViewComposite from './shaders/view-composite.frag.glsl?raw';
-import { OCC_BLOCK, type VolumeBaker } from './bakes.ts';
+import { DILUTION, OCC_BLOCK, type VolumeBaker } from './bakes.ts';
 import { DEFAULT_PARAMS, TEMP_KELVIN_MAX, TEMP_KELVIN_MIN, type VolumeParams } from './params.ts';
 
 /** One triangle covering the viewport (clip-space positions; the vertex shader derives vUv). */
@@ -73,7 +73,7 @@ export class VolumePass extends Pass {
   /** Light-term isolation: 0 all, 1 sun, 2 sky+ground ambient, 3 plume+fire light, 4 emission. */
   lightDebug = 0;
   /** Stochastic density-filter width in texels (removes trilinear facets; larger = softer). */
-  stochAmp = 0.35;
+  stochAmp = 0.15;
   /** Set false to bypass the volume (the composite passes the opaque colour + plume through). */
   volumeEnabled = true;
   readonly params: VolumeParams;
@@ -132,6 +132,7 @@ export class VolumePass extends Pass {
       uViewMode: { value: 0 }, uFogColor: { value: new THREE.Color() }, uFogDensity: { value: 0 },
       uDriftOffset: V3(), uGrowth: { value: new THREE.Vector3(1, 1, 1) },
       uTempRange: { value: new THREE.Vector2(TEMP_KELVIN_MIN, TEMP_KELVIN_MAX) },
+      uRedden: { value: new THREE.Vector4() }, uDust: { value: new THREE.Vector4(1, 1, 1, 40) }, uSkyOcc: { value: params.skyOcclusion }, uNormalAmb: { value: params.normalAmbient }, uSunDiff: { value: new THREE.Vector3() }, uDilution: { value: DILUTION },
     };
     const perView = () => ({
       uDepth: { value: null as THREE.Texture | null }, uPlume: { value: null as THREE.Texture | null },
@@ -253,6 +254,11 @@ export class VolumePass extends Pass {
     u.uShapeP.value.set(p.shapeAmount, 1 / p.shapeScale, 0);
     u.uDetailP.value.set(p.detailAmount, 1 / p.detailScale, p.crisp);
     u.uNearFade.value = p.nearFade;
+    u.uRedden.value.set(p.reddenR, p.reddenG, p.reddenB, p.reddenHaze);
+    u.uDust.value.set(p.dustR, p.dustG, p.dustB, Math.max(1, p.dustHeight));
+    u.uSkyOcc.value = p.skyOcclusion;
+    u.uNormalAmb.value = p.normalAmbient;
+    u.uSunDiff.value.set(p.sunDiffuse, p.sunAbsorb, p.reddenCloud);
     u.uViewMode.value = g.uViewMode.value;
     u.uFogColor.value.copy(g.uFogColor.value);
     u.uFogDensity.value = g.uFogDensity.value;

@@ -23,6 +23,8 @@ import fragOccupancy from './shaders/occupancy.frag.glsl?raw';
 import fragLight from './shaders/light.frag.glsl?raw';
 
 export const OCC_BLOCK = 4;
+/** Rising steam mixes with air: density x mix(1, z, smoothstep(x, y, height)) in the bake (the march undoes it to erode). */
+export const DILUTION = new THREE.Vector3(110, 360, 0.5);
 
 export interface LightBakeInputs {
   sunDir: THREE.Vector3;          // toward the sun
@@ -123,15 +125,15 @@ export class VolumeBaker {
       blendSrcAlpha: THREE.OneFactor,
       blendDstAlpha: THREE.OneFactor,
     });
-    this.mFinal = mat(fragFinalize, { uSplat: { value: null }, uLayer: { value: 0 }, uRes: { value: new THREE.Vector3() }, uBoxMin: boxMin, uBoxSize: boxSize, uFaceFade: { value: 14 }, uDilution: { value: new THREE.Vector3(110, 360, 0.5) } });
+    this.mFinal = mat(fragFinalize, { uSplat: { value: null }, uLayer: { value: 0 }, uRes: { value: new THREE.Vector3() }, uBoxMin: boxMin, uBoxSize: boxSize, uFaceFade: { value: 14 }, uDilution: { value: DILUTION } });
     this.mOcc = mat(fragOccupancy, { uDensity: { value: null }, uLayer: { value: 0 }, uBlock: { value: OCC_BLOCK } });
     this.mLight = mat(fragLight, {
       uDensity: { value: null }, uLayer: { value: 0 }, uRes: { value: new THREE.Vector3() },
       uBoxMin: boxMin, uBoxSize: boxSize, uSunDir: { value: new THREE.Vector3(0, 1, 0) },
       uSigma: { value: 0.1 }, uBakeScale: { value: 0.72 },
       uPlumeA: { value: new THREE.Vector3() }, uPlumeB: { value: new THREE.Vector3() },
-      uFire: { value: Array.from({ length: 12 }, () => new THREE.Vector4()) },
-      uFireW: { value: new Array(12).fill(0) }, uFireN: { value: 0 },
+      uFire: { value: Array.from({ length: 16 }, () => new THREE.Vector4()) },
+      uFireW: { value: new Array(16).fill(0) }, uFireN: { value: 0 },
       uPlumeN: { value: 10 }, uSegSteps: { value: 12 }, uFireTauScale: { value: 0.3 },
     });
   }
@@ -248,7 +250,7 @@ export class VolumeBaker {
     u.uPlumeB.value.copy(inp.plumeB);
     u.uPlumeN.value = inp.plumeSamples;
     u.uSegSteps.value = inp.segSteps;
-    const fires = inp.fires.slice(0, 12);
+    const fires = inp.fires.slice(0, 16);
     fires.forEach((f, i) => { (u.uFire.value as THREE.Vector4[])[i].set(f.c[0], f.c[1], f.c[2], f.r); (u.uFireW.value as number[])[i] = f.w; });
     u.uFireN.value = fires.length;
     for (let z = 0; z < D; z++) {

@@ -35,7 +35,37 @@ export interface VolumeParams {
    * mean free path. Applied to the sun optical depth (live) and to the fire/plume light (rebake).
    */
   sunTauScale: number;
+  /** Diffusion decay of the fire/plume light per optical depth, ~sqrt(3 (1 - albedo)(1 - g)). (rebake) */
   fireTauScale: number;
+  /**
+   * Fine-aerosol reddening (dust, soot, salt from the pad; Angstrom-like): extra extinction per unit
+   * sun optical depth for R, G, B. Sunlight that diffused deep into the cloud leaves it amber.
+   */
+  reddenR: number;
+  reddenG: number;
+  reddenB: number;
+  /**
+   * Vertical optical depth (in the same units) of that aerosol in the boundary-layer haze at the ground
+   * (scale height 250 m). The sun's slant path through it is ~1/sin(elevation): amber at sunrise, nothing at noon.
+   */
+  reddenHaze: number;
+  /** Share (0..1) of that aerosol mixed into the cloud itself (reddens deep, multiply scattered light at any sun height). */
+  reddenCloud: number;
+  /** Albedo tint of the ground-hugging, dust-laden steam (rgb) and the height (m) over which it fades out. */
+  dustR: number;
+  dustG: number;
+  dustB: number;
+  dustHeight: number;
+  /** Weight (0..1) of the near-field sky occlusion on the detailed density (billow undersides). */
+  skyOcclusion: number;
+  /**
+   * Diffuse sun transmission through the thick banks, ~1/(1 + 0.75 (1 - g) tau) x exp(-sunAbsorb tau):
+   * strength (0 = off) and absorption per optical depth (~sqrt(3 (1 - albedo)(1 - g)) for pure droplets).
+   */
+  sunDiffuse: number;
+  sunAbsorb: number;
+  /** 0..1: how strongly the steam's density-gradient normal splits the ambient between sky (up) and ground (down). */
+  normalAmbient: number;
   /** Shape-noise erosion strength (0..1) and world scale (m per tile). */
   shapeAmount: number;
   shapeScale: number;
@@ -65,19 +95,32 @@ export const DEFAULT_PARAMS: VolumeParams = {
   msB: 0.35,
   msC: 0.55,
   powder: 0.5,
-  sunGain: 8,
-  ambientGain: 0.9,
-  plumeGain: 18,
-  emissionGain: 1.2,
-  fireLightGain: 14,
-  fireLightKelvin: 1650,
-  sunTauScale: 0.6,
-  fireTauScale: 0.5,
+  sunGain: 9,
+  ambientGain: 1.2,
+  plumeGain: 26,
+  emissionGain: 0.6,
+  fireLightGain: 30,
+  fireLightKelvin: 2300,
+  sunTauScale: 0.7,
+  fireTauScale: 0.08,
+  reddenR: 0.0,
+  reddenG: 0.2,
+  reddenB: 0.55,
+  reddenHaze: 0.36,
+  reddenCloud: 0.45,
+  dustR: 0.5,
+  dustG: 0.46,
+  dustB: 0.43,
+  dustHeight: 55,
+  skyOcclusion: 0.8,
+  normalAmbient: 0.6,
+  sunDiffuse: 0.8,
+  sunAbsorb: 0.035,
   shapeAmount: 0.3,
   shapeScale: 300,
-  detailAmount: 0.7,
-  detailScale: 30,
-  crisp: 3.5,
+  detailAmount: 0.85,
+  detailScale: 18,
+  crisp: 12,
   nearFade: 6,
   maxFrames: 128,
   windX: 1.6,

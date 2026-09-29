@@ -22,7 +22,8 @@
 import * as THREE from 'three';
 import type { AppContext, LightingPreset, Module, QualitySettings } from '../../contracts.ts';
 import { VolumeBaker, runJob, type LightBakeInputs } from './bakes.ts';
-import { L0_SPECS, buildPuffs, fireSources, photoFrameFrom, type PhotoFrame, type Puff, type Vec3 } from './puffs.ts';
+import { PAD_YAW } from '../../scene-config.ts';
+import { FIRE_SPECS, buildPuffs, fireSources, photoFrameFrom, type PhotoFrame, type Puff, type Vec3 } from './puffs.ts';
 import { DEFAULT_PARAMS, type VolumeParams } from './params.ts';
 import { VolumePass } from './volume-pass.ts';
 
@@ -82,12 +83,12 @@ export class VolumeModule implements Module {
     const a = ctx.anchors;
     const pc = a.photoCamera;
     this.frame = photoFrameFrom(pc.pos.toArray() as Vec3, pc.target.toArray() as Vec3, pc.fovDeg, pc.rollDeg);
-    this.puffs = buildPuffs(this.frame);
+    this.puffs = buildPuffs(this.frame, { padYaw: PAD_YAW });
     this.baker = new VolumeBaker(ctx.renderer, a.volumeBounds);
     this.pass.attach(ctx, this.baker);
 
     // hotspots: steam on the east bank, fireball at the deflector
-    const fires = fireSources(this.frame).slice(0, L0_SPECS.filter((s) => s.g === 'F').length);
+    const fires = fireSources(this.frame, PAD_YAW).slice(0, FIRE_SPECS.length);
     const fc = fires.reduce((s, f) => s.add(new THREE.Vector3(...f.c).multiplyScalar(f.w)), new THREE.Vector3());
     this.fireCentre.copy(fc);
     ctx.hotspots.push(
@@ -140,7 +141,7 @@ export class VolumeModule implements Module {
       fireTauScale: this.params.fireTauScale,
       plumeA: g.uPlumeAxisA.value.clone(),
       plumeB: g.uPlumeAxisB.value.clone(),
-      fires: fireSources(this.frame!),
+      fires: fireSources(this.frame!, PAD_YAW),
       plumeSamples: low ? 6 : 10,
       segSteps: low ? 8 : 12,
     };
@@ -186,8 +187,9 @@ export class VolumeModule implements Module {
       }
     }
 
-    // fire light colour: blackbody at params.fireLightKelvin x gain (irradiance units of the bake)
-    blackbodyColor(p.fireLightKelvin, this.fireColor).multiplyScalar(p.fireLightGain * 1.4);
+    // fire light colour: blackbody at params.fireLightKelvin x gain (irradiance units of the bake), scaled
+    // like the plume light by the preset (night 1.3, noon 0.55)
+    blackbodyColor(p.fireLightKelvin, this.fireColor).multiplyScalar(p.fireLightGain * 1.4 * ctx.preset.plumeLightScale);
     this.pass.setFireLight(this.fireColor, this.fireCentre);
 
     // drift: slow advection + billow growth about the mount; frozen when uDrift = 0
