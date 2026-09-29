@@ -6,6 +6,12 @@
 
 #define PD_TAU 6.28318530718
 
+// PAD-LOCAL frame: the mount, trench, diverter, apron and their plumbing are built with x along the flame-trench axis
+// (world bearing 123 deg) and placed with rotation.y = PAD_YAW (-33.1 deg, scene-config.ts). pdL rotates a world
+// position or direction into that frame (same as toPadLocal), so joints, soot fans and brushing follow the geometry.
+const float PD_PAD_C = 0.83766, PD_PAD_S = -0.54612;   // cos / sin of PAD_YAW
+vec3 pdL(vec3 v) { return vec3(PD_PAD_C * v.x - PD_PAD_S * v.z, v.y, PD_PAD_S * v.x + PD_PAD_C * v.z); }
+
 float pdFw = 0.0;   // pixel footprint in metres (fwidth of the world position); set by pdInit
 
 void pdInit(vec3 p) {
@@ -232,7 +238,8 @@ PdSurf pdConcrete(vec3 p, vec3 nW, int variant) {
   float mid = pdFbm(p / 0.9, 0.9);
   float pore = pdFbm(p / 0.07, 0.07);
   float stainStreak = pdFbm(vec3(c.x * 0.9, c.y * 0.12, 0.5), 1.1);
-  vec3 alb = PD_LIN(0.30, 0.275, 0.25) * (0.75 + 0.45 * macro) * (0.85 + 0.3 * mid);
+  // aged, dust-toned concrete (the site's aggregate is tan sand): warm mid grey-brown, never the clean light grey of new pours
+  vec3 alb = PD_LIN(0.21, 0.17, 0.14) * (0.75 + 0.45 * macro) * (0.85 + 0.3 * mid);
   // hairline cracks: cellular ridges at ~2.6 m cells, domain-warped
   float crack = 0.0;
   if (pdFade(0.03) > 0.002) {
@@ -243,29 +250,38 @@ PdSurf pdConcrete(vec3 p, vec3 nW, int variant) {
   float H = (pore - 0.5) * 0.003 + (mid - 0.5) * 0.004 - crack * 0.006;
   float dark = 0.0;
   if (variant == 1) {
-    // expansion joints every 12 m: two dark lines + slab-to-slab tone step
+    // Pad-2 apron (pad-local frame): a weathered warm grey-brown pour, not fresh grey concrete. Broad dust, mud and
+    // wash-down patches at 15-60 m, slab-to-slab tone steps every 12 m, and heavy soot near the mount.
+    alb *= PD_LIN(0.538, 0.376, 0.300);
+    float big = smoothstep(0.30, 0.70, pdFbm(vec3(p.x, p.z, 3.7) / 42.0, 42.0));
+    float pat = smoothstep(0.30, 0.70, pdFbm(vec3(p.x, p.z, 9.1) / 14.0 + big, 14.0));
+    alb *= (0.62 + 0.80 * big) * (0.82 + 0.36 * smoothstep(0.30, 0.70, macro));
+    alb = mix(alb, PD_LIN(0.150, 0.088, 0.055), smoothstep(0.55, 0.95, pat) * 0.6);             // mud / dust tongues off the flats
+    alb = mix(alb, PD_LIN(0.045, 0.034, 0.028), smoothstep(0.55, 0.95, 1.0 - pat) * 0.55);     // wet / oil-stained pours
     vec2 cell = floor(p.xz / 12.0);
     float tone = sl_hash12(cell);
-    alb *= 0.92 + 0.16 * tone;
+    alb *= 0.90 + 0.20 * tone;
+    // expansion joints: thin dark lines, faded out once they are below a pixel (no plaid at distance)
     vec2 g = abs(fract(p.xz / 12.0 + 0.5) - 0.5) * 12.0;
     float jd = min(g.x, g.y);
-    float joint = (1.0 - smoothstep(0.015, 0.05 + pdFw * 0.7, jd));
-    alb = mix(alb, PD_LIN(0.06, 0.055, 0.05), joint * 0.6);
+    float joint = (1.0 - smoothstep(0.015, 0.05 + pdFw * 0.5, jd)) * (1.0 - smoothstep(0.04, 0.22, pdFw));
+    alb = mix(alb, PD_LIN(0.05, 0.045, 0.04), joint * 0.5);
     H -= joint * 0.005;
-    // exhaust soot: radial about the mount + an east-west fan out of the trench mouths
+    // exhaust soot: radial about the mount + an east-west fan out of the trench mouths + a long lobe toward the front edge
     float r = length(p.xz);
-    float fan = exp(-abs(p.z) / 15.0) * exp(-abs(p.x) / 75.0);
-    dark = clamp(exp(-r / 26.0) * 0.85 + fan * 0.6, 0.0, 0.92) * (0.65 + 0.7 * macro);
+    float fan = exp(-abs(p.z) / 18.0) * exp(-abs(p.x) / 90.0);
+    float lobe = exp(-abs(p.x - 20.0) / 60.0) * smoothstep(-20.0, 60.0, p.z) * exp(-max(p.z - 60.0, 0.0) / 90.0);
+    dark = clamp(exp(-r / 34.0) * 0.9 + fan * 0.65 + lobe * 0.25, 0.0, 0.92) * (0.65 + 0.7 * macro);
     // oil / tyre darkening
     float oil = smoothstep(0.62, 0.85, pdFbm(p / 3.5, 3.5));
     alb *= 1.0 - 0.35 * oil;
-    // wash-down water shine near the trench
-    s.rough = 0.90 - 0.22 * smoothstep(0.65, 0.9, macro) * exp(-r / 45.0);
+    // wash-down water shine near the trench; otherwise fully rough (no sky sheen at grazing view)
+    s.rough = 0.98 - 0.20 * smoothstep(0.65, 0.9, macro) * exp(-r / 45.0);
   } else if (variant == 2) {
     float depth = smoothstep(0.5, -8.0, p.y);
     dark = clamp(0.35 + 0.45 * depth + 0.35 * exp(-abs(p.x) / 20.0), 0.0, 0.95) * (0.7 + 0.5 * macro);
     float spall = smoothstep(0.62, 0.82, pdFbm(p / 0.6, 0.6) * 0.6 + mid * 0.4) * depth;   // exposed aggregate
-    alb = mix(alb, PD_LIN(0.30, 0.27, 0.24), spall * 0.5);
+    alb = mix(alb, PD_LIN(0.27, 0.23, 0.19), spall * 0.5);
     H -= spall * 0.012;
     // vertical panel joints on walls every 7.5 m
     float pj = abs(fract(p.x / 7.5 + 0.5) - 0.5) * 7.5;

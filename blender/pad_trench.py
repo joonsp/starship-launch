@@ -14,7 +14,7 @@ import numpy as np
 
 import pad_geo as pg
 from pad_geo import Geo
-from pad_layout import APRON, APRON_TOP, TR_FLOOR, TR_HX, TR_HZ, TR_WALL_OUT, TRENCH_CUT
+from pad_layout import APRON, APRON_POLY, APRON_TOP, TR_FLOOR, TR_HX, TR_HZ, TR_WALL_OUT, TRENCH_CUT
 
 FL = TR_FLOOR
 DIV_HX = 13.5            # diverter half length along x
@@ -126,24 +126,10 @@ def pipes_geo():
     return g
 
 
-def _clip_z_max(poly, zmax):
-    """Sutherland-Hodgman clip of a polygon [(x,z)] to z <= zmax."""
-    out = []
-    n = len(poly)
-    for i in range(n):
-        a, b = poly[i], poly[(i + 1) % n]
-        ain, bin_ = a[1] <= zmax, b[1] <= zmax
-        if ain:
-            out.append(a)
-        if ain != bin_:
-            t = (zmax - a[1]) / (b[1] - a[1])
-            out.append((a[0] + (b[0] - a[0]) * t, zmax))
-    return out
-
-
-def pond_notch():
-    """OSM 'Pad-2 Deluge Runoff Pond' (centre (-25, 57), ~35 m) overlaps the south apron edge: the slab is cut round it
-    (polygon grown ~1.2 m for a curb) so the env module's pond water shows instead of being buried under the slab."""
+def pond_hole():
+    """OSM 'Pad-2 Deluge Runoff Pond' (world centre (-25, 57), ~35 m) now lies inside the slab: the slab is cut round it
+    (polygon grown ~1.2 m for a curb) so the env module's pond water shows instead of being buried under the concrete.
+    Returned in the PAD-LOCAL frame (the OSM points are world coordinates)."""
     import pad_layout as L
     pond = None
     for f in L.SITE["features"]:
@@ -151,6 +137,9 @@ def pond_notch():
             pond = [tuple(p) for p in f["points"]]
     if pond is None:
         return None
+    pond = [L.world_to_pad_xz(x, z) for (x, z) in pond]
+    if pond[0] == pond[-1]:
+        pond = pond[:-1]
     cx = sum(p[0] for p in pond) / len(pond)
     cz = sum(p[1] for p in pond) / len(pond)
     grown = []
@@ -158,44 +147,95 @@ def pond_notch():
         d = math.hypot(x - cx, z - cz)
         k = (d + 1.2) / d
         grown.append((cx + (x - cx) * k, cz + (z - cz) * k))
-    return _clip_z_max(grown, APRON["maxZ"])
+    return grown
+
+
+def _area(pts):
+    return 0.5 * sum(pts[i][0] * pts[(i + 1) % len(pts)][1] - pts[(i + 1) % len(pts)][0] * pts[i][1] for i in range(len(pts)))
+
+
+def slab_with_holes(g, mat, outer, holes, y0, y1):
+    """Prism over a plan polygon with holes: caps tessellated by Blender (mathutils), side walls facing outward from the
+    slab (out of the outer loop, into each hole)."""
+    from mathutils import Vector
+    from mathutils.geometry import tessellate_polygon
+    loops = [list(outer)] + [list(h) for h in holes]
+    flat = [pt for lp in loops for pt in lp]
+    tris = tessellate_polygon([[Vector((x, z, 0.0)) for (x, z) in lp] for lp in loops])
+    P, N, F = [], [], []
+    for y, ny in ((y1, 1.0), (y0, -1.0)):
+        b = len(P)
+        for (x, z) in flat:
+            P.append((x, y, z))
+            N.append((0.0, ny, 0.0))
+        for (i, j, k) in tris:
+            a_, b_, c_ = np.array(P[b + i]), np.array(P[b + j]), np.array(P[b + k])
+            if np.dot(np.cross(b_ - a_, c_ - a_), (0, ny, 0)) < 0:
+                F.append((b + i, b + k, b + j))
+            else:
+                F.append((b + i, b + j, b + k))
+    for li, lp in enumerate(loops):
+        ccw = _area(lp) > 0
+        for i in range(len(lp)):
+            (xa, za), (xb, zb) = lp[i], lp[(i + 1) % len(lp)]
+            d = np.array([xb - xa, 0.0, zb - za])
+            Ln = np.linalg.norm(d)
+            if Ln < 1e-9:
+                continue
+            nm = np.array([d[2], 0.0, -d[0]]) / Ln       # right of the edge = outward for a CCW loop in (x, z)
+            if not ccw:
+                nm = -nm
+            if li > 0:
+                nm = -nm                                # holes: the wall faces into the hole
+            b = len(P)
+            P += [(xa, y0, za), (xb, y0, zb), (xb, y1, zb), (xa, y1, za)]
+            N += [tuple(nm)] * 4
+            F += [(b, b + 1, b + 2), (b, b + 2, b + 3)]
+    P, N, F = np.array(P), np.array(N), np.array(F, dtype=np.int64)
+    e = np.cross(P[F[:, 1]] - P[F[:, 0]], P[F[:, 2]] - P[F[:, 0]])
+    bad = np.einsum("ij,ij->i", e, N[F[:, 0]]) < 0
+    F[bad] = F[bad][:, ::-1]
+    g.add(mat, P, N, F)
+    return g
 
 
 def apron_geo():
+    """The concrete pad plane (pad-local frame): APRON_POLY minus the trench cutout (the collar fills it) and minus the
+    runoff pond. Top at APRON_TOP, 1.5 m thick (buried)."""
     g = Geo()
-    A = APRON
     hx, hz = TRENCH_CUT["halfX"], TRENCH_CUT["halfZ"]
     y0, y1 = -1.4, APRON_TOP
-    # slabs around the collar; the south slab is a polygon with a notch for the runoff pond
-    slabs = [(A["minX"], A["maxX"], A["minZ"], -hz), (A["minX"], -hx, -hz, hz), (hx, A["maxX"], -hz, hz)]
-    for (xa, xb, za, zb) in slabs:
-        pg.box(g, "apron", [(xa + xb) / 2, (y0 + y1) / 2, (za + zb) / 2], [xb - xa, y1 - y0, zb - za])
-    notch = pond_notch()
-    if notch:
-        # path along the notch boundary: start at the east point on z = maxZ, walk the way that does NOT step straight
-        # onto the west edge point (i.e. around the pond), and end on the west edge point
-        edge = [i for i, p in enumerate(notch) if abs(p[1] - A["maxZ"]) < 1e-6]
-        ie = max(edge, key=lambda i: notch[i][0])
-        iw = min(edge, key=lambda i: notch[i][0])
-        n = len(notch)
-        fwd = [notch[(ie + k) % n] for k in range(n)]
-        bwd = [notch[(ie - k) % n] for k in range(n)]
-        path = bwd if notch[(ie + 1) % n] == notch[iw] else fwd
-        south = [(A["minX"], hz), (A["maxX"], hz), (A["maxX"], A["maxZ"])] + path + [(A["minX"], A["maxZ"])]
-    else:
-        south = [(A["minX"], hz), (A["maxX"], hz), (A["maxX"], A["maxZ"]), (A["minX"], A["maxZ"])]
-    pg.extrude_poly(g, "apron", south, y0, y1)
+    cut = [(-hx, -hz), (hx, -hz), (hx, hz), (-hx, hz)]
+    holes = [cut]
+    pond = pond_hole()
+    if pond:
+        holes.append(pond)
+    slab_with_holes(g, "apron", list(APRON_POLY), holes, y0, y1)
     return g
+
+
+FENCE_HX, FENCE_HZ = 48.0, 25.0
+FENCE_GAP = (-31.0, -7.7)      # x range of the north fence removed where tower 2 and its annex stand on the fence line
+FENCE_GAP_WATER = (14.5, 17.5)  # the deluge water main crosses the north fence here
+FENCE_GAP_WEST = (-13.0, -7.0)  # the three propellant lines cross the west fence here (z range)
+
+
+def fence_runs():
+    """Fence segments (x0, z0, x1, z1) in the pad-local frame, with the gap for tower 2 in the north side."""
+    fx, fz = FENCE_HX, FENCE_HZ
+    g0, g1 = FENCE_GAP
+    w0, w1 = FENCE_GAP_WATER
+    q0, q1 = FENCE_GAP_WEST
+    return [((-fx, -fz), (g0, -fz)), ((g1, -fz), (w0, -fz)), ((w1, -fz), (fx, -fz)), ((fx, -fz), (fx, fz)), ((fx, fz), (-fx, fz)),
+            ((-fx, fz), (-fx, q1)), ((-fx, q0), (-fx, -fz))]
 
 
 def fence_geo():
     """Guard fence round the trench / mount enclosure: posts, three rails, mid mesh panels."""
     g = Geo()
-    fx, fz = 48.0, 25.0
-    loops = [((-fx, -fz), (fx, -fz)), ((fx, -fz), (fx, fz)), ((fx, fz), (-fx, fz)), ((-fx, fz), (-fx, -fz))]
-    for (x0, z0), (x1, z1) in loops:
+    for (x0, z0), (x1, z1) in fence_runs():
         L = math.hypot(x1 - x0, z1 - z0)
-        m = int(L // 2.5)
+        m = max(int(L // 2.5), 1)
         ts = np.linspace(0, 1, m + 1)
         px = x0 + (x1 - x0) * ts
         pz = z0 + (z1 - z0) * ts
@@ -206,10 +246,14 @@ def fence_geo():
     return g
 
 
+LIGHT_POLES = [(-82.0, -60.0), (82.0, -60.0), (-82.0, 60.0), (82.0, 60.0), (-45.0, -62.0), (45.0, 62.0),
+               (90.0, 150.0), (200.0, 190.0), (230.0, 90.0)]
+
+
 def lights_geo():
     """Flood-light poles on the apron corners (15 m masts with lamp banks)."""
     g = Geo()
-    for (x, z) in ((-82.0, -60.0), (82.0, -60.0), (-82.0, 60.0), (82.0, 60.0), (-45.0, -62.0), (45.0, 62.0)):
+    for (x, z) in LIGHT_POLES:
         pg.tubes(g, "galv", _v(x, APRON_TOP, z)[None], _v(x, 6.0, z)[None], 0.28, seg=10)
         pg.tubes(g, "galv", _v(x, 6.0, z)[None], _v(x, 16.0, z)[None], 0.18, seg=10)
         pg.box(g, "concrete", [x, 0.4, z], [1.4, 0.8, 1.4])

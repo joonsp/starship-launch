@@ -50,7 +50,7 @@ OLM_HALF = 17.0                                # 34 m square (est)
 OLM_THICK = 2.6                                # deck box-girder depth
 HOLE_R = 5.0                                   # central booster opening, 10 m across
 APRON_TOP = 0.12
-APRON = dict(minX=-90.0, maxX=90.0, minZ=-70.0, maxZ=70.0)
+APRON = dict(minX=-90.0, maxX=90.0, minZ=-70.0, maxZ=70.0)   # scene-config.ts APRON (contract rectangle); the slab itself is APRON_POLY
 TRENCH_CUT = dict(halfX=40.0, halfZ=16.0)      # env terrain cutout (scene-config.ts TRENCH_CUTOUT)
 
 # ---------------------------------------------------------------- flame trench (east-west)
@@ -75,3 +75,47 @@ def yaw_mat(deg):
 def tower_to_world(pts, centre=TOWER_C, yaw=TOWER_YAW):
     """Map tower-local points (n,3) to world."""
     return np.asarray(pts) @ yaw_mat(yaw).T + centre
+
+
+# ---------------------------------------------------------------- pad-local frame (PAD_YAW)
+# The mount, trench, diverter, apron, deluge plumbing and site pieces are authored in a PAD-LOCAL frame (x along the
+# trench axis, z across it) and placed with rotation.y = PAD_YAW about the vehicle axis (scene-config.ts PAD_YAW,
+# toPadLocal). In Blender that is add_object(..., yaw_deg=PAD_YAW), the same convention as the tower.
+PAD_YAW = val("scene.trench_yaw")              # -33.1 deg: local +x -> world (0.838, 0, 0.546), bearing 123 deg
+
+
+def pad_to_world(pts):
+    """Pad-local (n,3) -> world (n,3)."""
+    return np.asarray(pts, dtype=float) @ yaw_mat(PAD_YAW).T
+
+
+def world_to_pad_xz(x, z):
+    a = math.radians(PAD_YAW)
+    c, s = math.cos(a), math.sin(a)
+    return c * x - s * z, s * x + c * z
+
+
+def pad_to_world_xz(x, z):
+    a = math.radians(PAD_YAW)
+    c, s = math.cos(a), math.sin(a)
+    return c * x + s * z, -s * x + c * z
+
+
+# Tower 2 and its annex (OSM polygons) in the pad-local frame. Nothing of the mount may intrude on this zone.
+_tx, _tz = world_to_pad_xz(float(TOWER_C[0]), float(TOWER_C[2]))
+TOWER_LOCAL_C = (_tx, _tz)                     # about (-17.3, -21.3)
+# bounding rectangle of the four footings (leg centre +-5.45, footing 4.2 m) and of the annex L, plus a 1 m margin
+TOWER_ZONE = dict(minX=-30.0, maxX=-8.7, minZ=-34.0, maxZ=-12.8)
+
+
+def in_tower_zone(x, z, m=0.0):
+    Z = TOWER_ZONE
+    return Z["minX"] - m <= x <= Z["maxX"] + m and Z["minZ"] - m <= z <= Z["maxZ"] + m
+
+
+# ---------------------------------------------------------------- apron slab (pad-local plan polygon)
+# The photo's slab (x 820-1330, y 725-775) back-projects to pad-local z 160-215: a concrete plane runs from the mount
+# out to a straight front edge along the trench axis at z = 213, with a chamfered west corner (the diagonal edge seen
+# left of the slab in the photo, through local (20, 165) and (59, 213)).
+APRON_POLY = [(-90.0, -70.0), (90.0, -70.0), (160.0, 0.0), (255.0, 70.0), (255.0, 200.0), (240.0, 213.0),
+              (59.0, 213.0), (20.0, 165.0), (-52.0, 76.0), (-90.0, 76.0)]
