@@ -59,12 +59,14 @@ void main() {
     vec4 rc = uReflMat * vec4(vWorld, 1.0);
     vec2 ruv = rc.xy / rc.w + N.xz * 0.9;
     vec3 pr = texture(uReflect, clamp(ruv, 0.002, 0.998)).rgb;
-    refl = mix(pr, skyR, smoothstep(2500.0, 7000.0, dist));
+    refl = mix(pr, skyR, smoothstep(500.0, 2800.0, dist));
   }
   // the far sea reads cooler and greyer than the warm sky it mirrors (haze, foam and sediment scatter): tint the reflection
-  float coolK = smoothstep(200.0, 2500.0, dist) * 0.55;
+  float coolK = smoothstep(200.0, 2500.0, dist) * 0.75;
   refl = mix(refl, vec3(dot(refl, vec3(0.3, 0.55, 0.15))) * vec3(0.80, 0.98, 1.08), coolK);
   F *= 1.0 - 0.55 * smoothstep(0.02, 0.32, rough);
+  // a wind-roughened sea seen at a grazing angle reflects, on average, far less than a flat mirror (Cox-Munk slope spread)
+  F *= mix(1.0, 0.20, smoothstep(250.0, 2500.0, dist));
 
   // ---------------------------------------------------------------- body colour (turbid shallows -> teal deep)
   float depth = clamp(sd * 0.0065, 0.02, 40.0);

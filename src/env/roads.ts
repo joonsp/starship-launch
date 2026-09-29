@@ -6,10 +6,14 @@ import type { Globals } from '../contracts.ts';
 import { applyGlobals } from '../core/material-hooks.ts';
 import { HAZE_APPLY, HAZE_DECL } from './haze.ts';
 import type { SiteData, SiteFeature } from './site-data.ts';
+import { APRON, toPadLocal } from '../scene-config.ts';
 
-/** The pad module owns everything inside this rectangle (its apron sits above the terrain at y ~ 0.12). */
-export const PAD_ZONE = { x0: -100, x1: 100, z0: -80, z1: 60 };
-export const inPadZone = (x: number, z: number): boolean => x > PAD_ZONE.x0 && x < PAD_ZONE.x1 && z > PAD_ZONE.z0 && z < PAD_ZONE.z1;
+/** The pad module owns everything inside the APRON rectangle (PAD-LOCAL frame, rotated by the pad yaw) plus a margin. */
+const PAD_ZONE_MARGIN = 12;
+export const inPadZone = (x: number, z: number): boolean => {
+  const [lx, lz] = toPadLocal(x, z);
+  return lx > APRON.minX - PAD_ZONE_MARGIN && lx < APRON.maxX + PAD_ZONE_MARGIN && lz > APRON.minZ - PAD_ZONE_MARGIN && lz < APRON.maxZ + PAD_ZONE_MARGIN;
+};
 
 export const enum RoadType { Asphalt = 0, Concrete = 1, Gravel = 2, Dirt = 3, Path = 4 }
 
@@ -92,6 +96,7 @@ uniform sampler2D uRoadNoise;
 
 const AT_COLOR = /* glsl */`
   float slRoadK = 300.0;
+  float slHazeCap = 1.0;
   float slDist = length(vSlWorldPos - cameraPosition);
   {
     float ru = vRoad.x, rs = vRoad.y, rw = vRoad.w;

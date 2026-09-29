@@ -6,8 +6,7 @@ import vert from './glsl/ocean.vert.glsl?raw';
 import frag from './glsl/ocean.frag.glsl?raw';
 import type { Globals } from '../contracts.ts';
 import type { SiteData } from './site-data.ts';
-import { coastProfile } from './site-data.ts';
-import { COAST_N, COAST_R } from './terrain.ts';
+import { COAST_N, COAST_R, envCoastProfile } from './terrain.ts';
 import { WATER_Y } from './reflection.ts';
 
 export class Ocean {
@@ -17,7 +16,7 @@ export class Ocean {
   constructor(globals: Globals, site: SiteData, coastTex: THREE.Texture, noise: THREE.Texture, waves: THREE.Texture, skyCube: THREE.Texture, hazeCube: THREE.Texture) {
     // polygon: coastline (x(z), pushed 1.5 m inland so it overlaps the terrain; the terrain wins the overlap via
     // polygon offset) + a far rectangle. ShapeGeometry lies in x/y; y = -z_world, then rotate onto the ground plane.
-    const prof = coastProfile(site, COAST_N, COAST_R);
+    const prof = envCoastProfile(site);
     const FAR = 70000;
     const pts: THREE.Vector2[] = [];
     pts.push(new THREE.Vector2(prof[0] - 1.5, FAR)); // z = -FAR  -> y = +FAR
@@ -43,7 +42,7 @@ export class Ocean {
         uNoise: { value: noise }, uWave: { value: waves }, uReflect: { value: null }, uReflMat: { value: new THREE.Matrix4() },
         uSkyCube: { value: skyCube }, uHazeCube: { value: hazeCube }, uCoast: { value: coastTex },
         uOcean: { value: new THREE.Vector4(0, 1.0, 0.30, 1.0) },
-        uBody: { value: new THREE.Color(0.07, 0.15, 0.18) },
+        uBody: { value: new THREE.Color(0.045, 0.115, 0.14) },
       },
     });
     this.mesh = new THREE.Mesh(geo, this.material);

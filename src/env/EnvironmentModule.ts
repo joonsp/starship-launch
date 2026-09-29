@@ -152,7 +152,7 @@ export class EnvironmentModule implements Module {
   private applyBounce(p: LightingPreset): void {
     // warm fill from the orange steam banks (they are lit by sun + fireball); scaled by the preset's plume light scale
     const nightK = THREE.MathUtils.smoothstep(-p.sun.dir.y, 0.04, 0.30);
-    const k = 0.62 * p.plumeLightScale * (1 - 0.88 * nightK);
+    const k = 0.5 * p.plumeLightScale * (1 - 0.88 * nightK);
     this.terrain?.setBounce(new THREE.Color(1.0, 0.56, 0.28).multiplyScalar(k), 650);
   }
 
