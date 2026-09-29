@@ -106,7 +106,7 @@ export const DEFAULT_PARAMS: VolumeParams = {
   reddenR: 0.0,
   reddenG: 0.2,
   reddenB: 0.55,
-  reddenHaze: 0.36,
+  reddenHaze: 0.22,   // lowered from 0.36 when PHOTO_PRESET's sun was warmed to 1 : 0.62 : 0.30 (the net sunrise reddening of the steam is unchanged)
   reddenCloud: 0.45,
   dustR: 0.5,
   dustG: 0.46,

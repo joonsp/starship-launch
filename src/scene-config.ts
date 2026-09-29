@@ -65,13 +65,16 @@ export const PHOTO_PRESET: LightingPreset = {
   id: 'photo',
   label: { en: 'Photo (sunrise)', fi: 'Valokuva (auringonnousu)' },
   viewMode: ViewMode.Photo,
-  sun: { dir: SUN_DIR.clone(), color: new THREE.Color(1.0, 0.74, 0.48), intensity: 3.2 },
+  // Low-sun key light: a 5.7 deg sun crosses ~10 air masses of the hazy coastal boundary layer, so its beam is
+  // ~1 : 0.62 : 0.30 in linear sRGB (a ~3800 K blackbody), as the post-chain inversion of the photo's sunlit cloud and
+  // frost highlights implies. The volume's own low-sun haze reddening (params.reddenHaze) is lowered to match.
+  sun: { dir: SUN_DIR.clone(), color: new THREE.Color(1.0, 0.62, 0.30), intensity: 4.2 },
   sky: { turbidity: 3.5, rayleigh: 1.6, mieCoefficient: 0.004, mieDirectionalG: 0.82, brightness: 1.0 },
-  ambient: { sky: new THREE.Color(0.32, 0.46, 0.72), ground: new THREE.Color(0.16, 0.13, 0.1), intensity: 0.9 },
+  ambient: { sky: new THREE.Color(0.32, 0.46, 0.72), ground: new THREE.Color(0.16, 0.13, 0.1), intensity: 0.8 },
   plumeLightScale: 1.0,
   exposure: 1.0,
   fog: { color: new THREE.Color(0.62, 0.7, 0.8), density: 0.00007 },
-  grade: { temperature: 0.08, tint: 0.0, contrast: 1.08, saturation: 1.12, lift: 0.0, gain: 1.0 },
+  grade: { temperature: 0.08, tint: -0.03, contrast: 1.1, saturation: 1.16, lift: 0.0, gain: 1.0 },
 };
 
 export const QUALITY: Record<QualityId, QualitySettings> = {

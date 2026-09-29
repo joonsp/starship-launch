@@ -5,12 +5,14 @@
 //   1. HazeMaskPass          plume target -> quarter-res heat mask (custom Pass, no swap)
 //   2. EffectPass(haze)      HeatHazeEffect: UV refraction of the HDR image (mainUv effects cannot
 //                            share a pass with convolution effects, so it lives alone)
-//   3. EffectPass(bloom, ExposureWB, AgX, Grade, LUT)   all in linear HDR -> display
-//        BloomEffect (mipmapBlur, ADD blend) -> exposure x white balance -> AgX -> lift/gain/
-//        contrast/saturation (sRGB) -> photo-look LUT (strength per preset)
+//   3. EffectPass(bloom, ExposureWB, Thermal, AgX, Grade, LUT)   all in linear HDR -> display
+//        BloomEffect (mipmapBlur, ADD blend) -> exposure x white balance -> [thermal preset only: the
+//        false-colour re-map of thermal.ts] -> AgX -> lift/gain/contrast/saturation (sRGB) -> look LUT
+//        (one look per preset, PRESET_LOOKS; strength per preset)
 //   4. EffectPass(tiltShift) TiltShiftEffect on display-linear colour; skipped when disabled
 //   5. EffectPass(SMAA)      after tone mapping (needs LDR); preset follows the quality level
-//   6. EffectPass(CA, finish) chromatic aberration (edges only), vignette, frozen grain, dither
+//   6. EffectPass(CA, finish) chromatic aberration (edges only), vignette, frozen grain, dither, and the
+//                            thermal scale bar
 //
 // Colour spaces: buffers between passes are linear HalfFloat. Inside pass 3 the LUT and the grade
 // operate on sRGB-encoded values; the pmndrs EffectPass inserts the conversions automatically.
@@ -22,11 +24,13 @@ import {
 } from 'postprocessing';
 import type { Pass } from 'postprocessing';
 import type { AppContext, LensState, LightingPreset, QualityId, QualitySettings } from '../contracts.ts';
+import { ViewMode } from '../contracts.ts';
 import { createTileableNoiseRG } from './noise.ts';
 import { HazeMaskPass, HeatHazeEffect } from './haze.ts';
-import { ExposureWBEffect, GradeEffect, createPhotoLookLUT } from './grade.ts';
+import { ExposureWBEffect, GradeEffect, createPhotoLookLUT, writeLookLUT, type PhotoLook } from './grade.ts';
 import { FinishEffect } from './finish.ts';
-import { POST_TUNING, type PostTuning } from './presets.ts';
+import { ThermalEffect } from './thermal.ts';
+import { POST_TUNING, PRESET_LOOKS, type PostTuning } from './presets.ts';
 
 const DEG = Math.PI / 180;
 
@@ -69,7 +73,7 @@ export interface PostChain {
   /** The individual effects, for GUIs and tests. */
   readonly effects: {
     haze: HeatHazeEffect; bloom: BloomEffect; exposureWB: ExposureWBEffect; tone: ToneMappingEffect;
-    grade: GradeEffect; lut: LUT3DEffect | null; tiltShift: TiltShiftEffect; smaa: SMAAEffect;
+    grade: GradeEffect; lut: LUT3DEffect | null; thermal: ThermalEffect; tiltShift: TiltShiftEffect; smaa: SMAAEffect;
     chromatic: ChromaticAberrationEffect; finish: FinishEffect;
   };
   readonly hazeMaskPass: HazeMaskPass;
@@ -102,12 +106,14 @@ export function createPostChain(ctx: AppContext, opts: PostChainOptions = {}): P
     luminanceThreshold: 2.4, luminanceSmoothing: 1.6,
   });
   const exposureWB = new ExposureWBEffect();
+  const thermal = new ThermalEffect();
   // NORMAL blend so opacity can bypass AgX (the thermal false-colour ramp must not be desaturated).
   const tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX, blendFunction: BlendFunction.NORMAL });
   const grade = new GradeEffect();
-  const lutTex = opts.lut === false ? null : createPhotoLookLUT(33);
+  let look: PhotoLook = PRESET_LOOKS[ctx.preset.id];
+  const lutTex = opts.lut === false ? null : createPhotoLookLUT(33, look);
   const lut = lutTex ? new LUT3DEffect(lutTex, { blendFunction: BlendFunction.NORMAL }) : null;
-  const mainPass = new EffectPass(camera, bloom, exposureWB, tone, grade, ...(lut ? [lut] : []));
+  const mainPass = new EffectPass(camera, bloom, exposureWB, thermal, tone, grade, ...(lut ? [lut] : []));
 
   // ── 4. Tilt-shift ─────────────────────────────────────────────────────────────────────────
   const tiltShift = new TiltShiftEffect({ offset: 0, rotation: 0, focusArea: 0.4, feather: 0.3, kernelSize: KernelSize.MEDIUM, resolutionScale: 0.5 });
@@ -150,6 +156,9 @@ export function createPostChain(ctx: AppContext, opts: PostChainOptions = {}): P
     bloom.blendMode.opacity.value = bloom.active ? 1 : 0;
 
     exposureWB.set(exposure, preset.grade.temperature, preset.grade.tint);
+    const isThermal = preset.viewMode === ViewMode.Thermal;
+    thermal.setActive(isThermal);
+    finish.setLegend(isThermal);
     tone.blendMode.opacity.value = tuning.toneMap ? 1 : 0;
     grade.set(preset.grade);
     if (lut) lut.blendMode.opacity.value = tuning.lut;
@@ -169,6 +178,9 @@ export function createPostChain(ctx: AppContext, opts: PostChainOptions = {}): P
   function setPreset(p: LightingPreset): void {
     preset = p;
     Object.assign(tuning, POST_TUNING[p.id]);
+    const nextLook = PRESET_LOOKS[p.id];
+    if (lutTex && nextLook !== look) writeLookLUT(lutTex, nextLook);
+    look = nextLook;
     applyTuning();
   }
 
@@ -224,7 +236,7 @@ export function createPostChain(ctx: AppContext, opts: PostChainOptions = {}): P
 
   return {
     passes, setPreset, setLens, setQuality, setDebug, tuning, applyTuning,
-    effects: { haze, bloom, exposureWB, tone, grade, lut, tiltShift, smaa, chromatic, finish },
+    effects: { haze, bloom, exposureWB, tone, grade, lut, thermal, tiltShift, smaa, chromatic, finish },
     hazeMaskPass: hazeMask,
     dispose() {
       unsub.forEach((f) => f());

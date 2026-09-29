@@ -5,8 +5,9 @@ import type { AppContext, AppEvent } from '../contracts.ts';
 import { ViewMode } from '../contracts.ts';
 import { createEmitter, createGlobals } from '../core/context.ts';
 import { PHOTO_PRESET } from '../scene-config.ts';
-import { PRESETS, PRESET_ORDER, POST_TUNING, applyPresetToGlobals, nextPreset } from './presets.ts';
+import { PRESETS, PRESET_ORDER, POST_TUNING, PRESET_LOOKS, applyPresetToGlobals, nextPreset } from './presets.ts';
 import { applyPhotoLook, whiteBalanceGains } from './grade.ts';
+import { LEGEND_TICKS, RAMP_K_MAX, RAMP_K_MIN, kelvinFromS, kelvinToU, paletteSRGB, rampRGB } from './thermal.ts';
 import { stillFilename } from './export.ts';
 import { PHOTO_SWATCH_RADIANCE } from './targets.ts';
 
@@ -41,6 +42,19 @@ describe('presets', () => {
     expect(PRESETS.night.exposure).toBeGreaterThan(1);
     expect(PRESETS.thermal.viewMode).toBe(ViewMode.Thermal);
     expect(PRESETS.clay.viewMode).toBe(ViewMode.Clay);
+  });
+  it('photo sun is a warm low-sun key (R > G > B, about 1 : 0.6 : 0.3) and every preset has a look', () => {
+    const s = PHOTO_PRESET.sun.color;
+    expect(s.r).toBeGreaterThan(s.g);
+    expect(s.g).toBeGreaterThan(s.b);
+    expect(s.b / s.r).toBeLessThan(0.4);
+    for (const id of PRESET_ORDER) expect(PRESET_LOOKS[id]).toBeDefined();
+    // clay: a raised, near-white sun and a near-monochrome grade
+    expect(Math.asin(PRESETS.clay.sun.dir.y) * 180 / Math.PI).toBeGreaterThan(20);
+    expect(PRESETS.clay.grade.saturation).toBeLessThan(0.5);
+    // thermal: no bloom (it would read as false heat) and no tone mapping
+    expect(POST_TUNING.thermal.bloomIntensity).toBe(0);
+    expect(POST_TUNING.thermal.toneMap).toBe(false);
   });
   it('applyPresetToGlobals writes the globals and emits the preset event', () => {
     const { ctx, events } = stubCtx();
@@ -92,6 +106,40 @@ describe('grade', () => {
     expect(sat(sky)).toBeGreaterThanOrEqual(sat([18 / 255, 126 / 255, 190 / 255]) - 0.02);
     const cream = applyPhotoLook([0.9, 0.9, 0.9]);
     expect(cream[0] - cream[2]).toBeGreaterThan(0.01);
+  });
+});
+
+describe('thermal', () => {
+  it('matches sl_thermalRamp in common.glsl at known points', () => {
+    const near = (a: number[], b: number[]) => a.forEach((v, i) => expect(v).toBeCloseTo(b[i], 3));
+    near(rampRGB(200), [0, 0, 0.012]);
+    near(rampRGB(3500), [2, 2, 2]);
+    near(rampRGB(300), [0.0358, 0, 0.1128]);
+  });
+  it('inverts the ramp (s = r + g + b) back to kelvin', () => {
+    for (const k of [250, 290, 330, 500, 1000, 2000, 3400]) {
+      const c = rampRGB(k);
+      expect(kelvinFromS(c[0] + c[1] + c[2]) / k).toBeCloseTo(1, 2);
+    }
+    expect(kelvinFromS(0)).toBe(RAMP_K_MIN);
+    expect(kelvinFromS(99)).toBe(RAMP_K_MAX);
+  });
+  it('has a monotone display curve and a palette that brightens with temperature', () => {
+    let prevU = -1, prevL = -1;
+    for (let k = 150; k <= 3600; k += 10) {
+      const u = kelvinToU(k);
+      expect(u).toBeGreaterThanOrEqual(prevU);
+      prevU = u;
+      const c = paletteSRGB(u);
+      const l = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+      expect(l).toBeGreaterThanOrEqual(prevL - 1e-3);
+      prevL = l;
+    }
+    expect(kelvinToU(200)).toBe(0);
+    expect(kelvinToU(3500)).toBeCloseTo(1, 6);
+    // the everyday scene (water 288 K .. steam 340 K) gets a readable share of the palette
+    expect(kelvinToU(340) - kelvinToU(285)).toBeGreaterThan(0.2);
+    for (let i = 1; i < LEGEND_TICKS.length; i++) expect(kelvinToU(LEGEND_TICKS[i])).toBeGreaterThan(kelvinToU(LEGEND_TICKS[i - 1]));
   });
 });
 

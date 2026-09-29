@@ -23,7 +23,8 @@ void vhTileShade(vec2 id, float e, float footTile, out vec3 alb, out float rough
   steelShow = step(0.9965, h2) * (1.0 - gap);                               // missing tile: steel substrate shows
   vec3 filler = vec3(0.028, 0.026, 0.025);                                   // dark gap filler
   alb = mix(tile, filler, gap);
-  rough = mix(0.17 + 0.14 * h3 + 0.25 * light, 0.85, gap);
+  // satin, not glossy: the reaction-cured glass coating is matte black up close (the photo's ship is ~#1d1b1a)
+  rough = mix(0.40 + 0.14 * h3 + 0.2 * light, 0.85, gap);
   // pillow-shaped tile: tiny dome, deep gap
   H = 0.0011 * smoothstep(gapHalf, gapHalf + 0.12, e) - 0.0016 * gap + 0.0003 * (h1 - 0.5);
 }
@@ -56,7 +57,7 @@ void vhShip(vec3 p, vec3 nObj,
   vhTileShade(id, e, footTile, tAlb, tRough, tH, steelShow);
   vec3 tAvg = vec3(0.0135);
   tAlb = mix(tAvg, tAlb, pat);
-  tRough = mix(0.24, tRough, pat);
+  tRough = mix(0.47, tRough, pat);
   tH *= pat;
 
   // ---- brushed stainless
@@ -81,8 +82,8 @@ void vhShip(vec3 p, vec3 nObj,
   metal = mix(1.0, 0.0, tl);
   H = mix(0.0004 * (brush - 0.5) + 0.006 * canning * vhDetailB(0.9), tH, tl);
   tile = tl;
-  cc = tl * 0.9;
-  ccRough = mix(0.5, 0.11 + 0.1 * (1.0 - pat), tl);
+  cc = tl * 0.3;
+  ccRough = mix(0.5, 0.3 + 0.1 * (1.0 - pat), tl);
 
   float skirt = 1.0 - smoothstep(VH_SKIRT_Y - 0.25, VH_SKIRT_Y + 0.25, ys);
   float inward = step(dot(normalize(nObj.xz + 1e-6), normalize(p.xz + 1e-6)), -0.3);
@@ -113,7 +114,7 @@ void vhFlap(vec3 p, vec3 nObj,
   vec3 tAlb; float tRough, tH, steelShow;
   vhTileShade(id, e, footTile, tAlb, tRough, tH, steelShow);
   tAlb = mix(vec3(0.0135), tAlb, pat);
-  tRough = mix(0.24, tRough, pat);
+  tRough = mix(0.47, tRough, pat);
   float face = smoothstep(0.55, 0.85, -n.z);          // 1 on the belly-facing flat face
   float wear = vhFbm(vec3(p.x * 1.4, p.y * 0.5, p.z * 1.4), 0.7);
   float brush = mix(0.5, vhNoise(vec3(p.x * 2.5, p.y * 70.0, p.z * 2.5)), vhDetail(0.02));
@@ -124,7 +125,7 @@ void vhFlap(vec3 p, vec3 nObj,
   metal = mix(1.0, 0.0, tl);
   H = tH * pat * tl;
   tile = tl;
-  cc = tl * 0.9;
-  ccRough = 0.14;
+  cc = tl * 0.3;
+  ccRough = 0.32;
   kelvin = mix(290.0, 298.0, tl);
 }
