@@ -11,6 +11,12 @@ import type { QualityId } from '../contracts.ts';
 
 export const QUALITY_LEVELS: QualityId[] = ['low', 'medium', 'high', 'ultra'];
 
+/** Probe window: frames skipped after ready (programs are precompiled, so only first-use uploads remain), then frames measured. */
+export const PROBE_SKIP = 6;
+export const PROBE_COUNT = 48;
+/** The probe only samples frames while the clouds are still marching, so warm-up frames + skip + count must fit in the 128 the volume accumulates. */
+export const WARM_FRAMES_MAX = 32;
+
 export interface GpuGuess { id: QualityId; gpu: string; reason: string }
 
 /** The unmasked renderer string, e.g. "ANGLE (AMD, AMD Radeon 8060S Graphics (radeonsi, gfx1151 ...), OpenGL 4.6)". */
@@ -62,7 +68,7 @@ export class FrameProbe {
   verdict: 'ok' | 'down' = 'ok';
   medianMs = 0;
 
-  constructor(private readonly skip = 20, private readonly count = 60, private readonly downAboveMs = 24) {}
+  constructor(private readonly skip = PROBE_SKIP, private readonly count = PROBE_COUNT, private readonly downAboveMs = 24) {}
 
   feed(dt: number): void {
     if (this.done) return;

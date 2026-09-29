@@ -152,6 +152,7 @@ export class Pipeline {
   private envRT: THREE.WebGLRenderTarget | null = null;
   private inView = false;
   private shadowDirty = true;
+  private shadowArmed = false;
   private movedAt = -1;         // performance.now() of the last camera move (-1 = settled)
   private readonly prevClear = new THREE.Color();
   private readonly tmpV2 = new THREE.Vector2();
@@ -252,6 +253,9 @@ export class Pipeline {
   /** Resize to the window (or explicit CSS size); keeps uResolution and the camera aspect in step. */
   resize(cssW = window.innerWidth, cssH = window.innerHeight): void {
     const { ctx, composer } = this;
+    // devicePixelRatio changes with browser zoom and when the window moves to another monitor: follow it (capped by the tier)
+    const pr = Math.min(window.devicePixelRatio || 1, ctx.quality.pixelRatio);
+    if (this.renderer.getPixelRatio() !== pr) this.renderer.setPixelRatio(pr);
     composer.setSize(Math.max(1, cssW), Math.max(1, cssH), false);
     ctx.camera.aspect = Math.max(1, cssW) / Math.max(1, cssH);
     ctx.camera.updateProjectionMatrix();
@@ -291,9 +295,20 @@ export class Pipeline {
     this.renderer.info.reset();   // info.autoReset is off: the stats cover the whole frame (all passes)
     const now = performance.now();
     if (this.movedAt >= 0 && now - this.movedAt > SHADOW_SETTLE_S * 1000) { this.movedAt = -1; this.shadowDirty = true; }
-    if (this.shadowDirty || !this.sun.shadow.map) { this.renderer.shadowMap.needsUpdate = true; this.shadowDirty = false; }
+    if (this.shadowDirty || !this.sun.shadow.map) { this.renderer.shadowMap.needsUpdate = true; this.shadowDirty = false; this.shadowArmed = true; }
     this.refreshGlobals(t);
   }
+
+  /**
+   * True while this pipeline still has a reason to draw a frame on its own: the camera moved less than
+   * SHADOW_SETTLE_S ago (the shadow map / LODs refresh once it settles) or a shadow refresh was armed by the
+   * last beginFrame() and not yet drawn. The app's idle gate (main.ts) uses it together with the volume
+   * accumulation state; when everything is false and nothing else changed, the frame is skipped.
+   */
+  get busy(): boolean { return this.movedAt >= 0 || this.shadowDirty || this.shadowArmed; }
+
+  /** Call after a frame that actually rendered (the armed shadow refresh has now been drawn). */
+  endFrame(): void { this.shadowArmed = false; }
 
   /** Frame-graph steps 1-5. beginFrame() and the module updates must already have run this frame. */
   render(dt: number): void {
@@ -342,18 +357,32 @@ export class Pipeline {
    */
   async precompile(withClipVariant = true): Promise<void> {
     const r = this.renderer, { scene, camera } = this.ctx;
-    await r.compileAsync(scene, camera);
-    if (withClipVariant) {
-      // program keys depend on the NUMBER of clipping planes, not on the camera, so the main camera will do
-      const prev = r.clippingPlanes;
-      r.clippingPlanes = [new THREE.Plane(new THREE.Vector3(0, 1, 0), 0.03)];
-      try { await r.compileAsync(scene, camera); } finally { r.clippingPlanes = prev; }
-    }
-    if (this.overlayScene.children.length) {
-      const vis = this.overlayScene.children.map((c) => c.visible);
-      this.overlayScene.children.forEach((c) => { c.visible = true; });
-      await r.compileAsync(this.overlayScene, camera);
-      this.overlayScene.children.forEach((c, i) => { c.visible = vis[i]; });
+    // Program keys include the output colour space, which three derives from the CURRENT render target: the main
+    // scene renders into the composer's linear HalfFloat buffer, not the canvas (sRGB). Compiling against the canvas
+    // built a full set of never-used sRGB variants (and left the real ones to the first frames), so target the buffer.
+    const prevRT = r.getRenderTarget();
+    r.setRenderTarget(this.composer.inputBuffer);
+    // compileAsync() logs a console warning where KHR_parallel_shader_compile is missing (Firefox, software GL): ask first
+    const parallel = r.extensions.has('KHR_parallel_shader_compile');
+    const compile = async (sc: THREE.Object3D): Promise<void> => { if (parallel) await r.compileAsync(sc, camera); else r.compile(sc, camera); };
+    try {
+      await compile(scene);
+      if (withClipVariant) {
+        // program keys depend on the NUMBER of clipping planes, not on the camera, so the main camera will do
+        const prev = r.clippingPlanes;
+        r.clippingPlanes = [new THREE.Plane(new THREE.Vector3(0, 1, 0), 0.03)];
+        try { await compile(scene); } finally { r.clippingPlanes = prev; }
+      }
+      if (this.overlayScene.children.length) {
+        // everything in the overlay is hidden until the education layer is switched on: show ALL of it for the compile
+        // (a child hidden by a layer switch would otherwise link its program on the first frame after the switch)
+        const saved: Array<[THREE.Object3D, boolean]> = [];
+        this.overlayScene.traverse((o) => { saved.push([o, o.visible]); o.visible = true; });
+        try { await compile(this.overlayScene); }
+        finally { for (const [o, v] of saved) o.visible = v; }
+      }
+    } finally {
+      r.setRenderTarget(prevRT);
     }
   }
 

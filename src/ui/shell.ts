@@ -77,6 +77,7 @@ export class UiShell {
   private walkHint!: HTMLElement;
   private cross!: HTMLElement;
   private toasts!: HTMLElement;
+  private unhideBtn!: HTMLButtonElement;
   private eduSlot!: HTMLElement;
 
   private idleTimer = 0;
@@ -101,7 +102,9 @@ export class UiShell {
     this.toasts = h('div', { class: 'ui-toasts', role: 'status', 'aria-live': 'polite' });
     this.loading = new LoadingScreen(() => this.state.T_F, this.binder);
 
-    this.shell.append(this.top, this.lensPanel, this.walk, this.dock, this.toasts, this.help.el, this.about.el, this.loading.el);
+    // Touch devices have no H key: while everything is hidden a faint corner button brings the interface back.
+    this.unhideBtn = iconButton({ icon: ICONS.eye, label: () => t('ui.unhide'), tip: () => t('ui.unhide'), cls: 'ui-unhide ui-icon-only ui-glass', showLabel: false }, () => this.toggleHidden(), this.binder);
+    this.shell.append(this.top, this.lensPanel, this.walk, this.dock, this.toasts, this.unhideBtn, this.help.el, this.about.el, this.loading.el);
     root.append(this.shell);
     this.placeEdu();
     this.syncAll();
@@ -116,7 +119,7 @@ export class UiShell {
   update(p: Partial<UiState>): void {
     const s = this.state;
     if (p.T_F !== undefined && p.T_F !== s.T_F) { s.T_F = p.T_F; this.binder.refresh(); }
-    if (p.mode !== undefined && p.mode !== s.mode) { s.mode = p.mode; this.modeSeg.set(p.mode); this.syncOverlay(); }
+    if (p.mode !== undefined && p.mode !== s.mode) { s.mode = p.mode; this.modeSeg.set(p.mode); this.releaseFocusForPlay(); this.syncOverlay(); }
     if (p.preset !== undefined && p.preset !== s.preset) { s.preset = p.preset; this.presetMenu.set(p.preset); }
     if ((p.quality !== undefined && p.quality !== s.quality) || (p.effectiveQuality !== undefined && p.effectiveQuality !== s.effectiveQuality)) {
       if (p.quality !== undefined) s.quality = p.quality;
@@ -333,7 +336,9 @@ export class UiShell {
       else if (part) el.append(part);
     }
   }
+  private coarse = (): boolean => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   private renderHint(): void {
+    if (this.coarse()) { this.walkHint.textContent = t(this.state.mode === 'fly' ? 'ui.fly.hint.touch' : 'ui.walk.hint.touch'); return; }
     if (this.state.mode === 'fly') this.richKeys(this.walkHint, t('ui.fly.hint', { move: '{move}', qe: '{qe}', run: '{run}' }), { move: 'WASD', qe: 'Q / E', run: 'Shift' });
     else this.richKeys(this.walkHint, t('ui.walk.hint', { move: '{move}', run: '{run}', crouch: '{crouch}', jump: '{jump}', esc: '{esc}' }), { move: 'WASD', run: 'Shift', crouch: 'C', jump: 'Space', esc: 'Esc' });
   }
@@ -345,7 +350,7 @@ export class UiShell {
     const groups: Array<{ title: string; rows: Array<[HTMLElement, string]> }> = [
       { title: 'ui.help.g.view', rows: [[K('1', '2', '3', '4'), 'ui.help.k.modes'], [K('L'), 'ui.help.k.preset'], [K('R'), 'ui.help.k.reset']] },
       { title: 'ui.help.g.lens', rows: [[K('[', ']'), 'ui.help.k.fov'], [K(',', '.'), 'ui.help.k.roll']] },
-      { title: 'ui.help.g.move', rows: [[K('W', 'A', 'S', 'D'), 'ui.help.k.move'], [K('Shift'), 'ui.help.k.run'], [K('C'), 'ui.help.k.crouch'], [K('Space'), 'ui.help.k.jump'], [K('Q', '/', 'E'), 'ui.help.k.qe']] },
+      { title: 'ui.help.g.move', rows: [[K('W', 'A', 'S', 'D'), 'ui.help.k.move'], [K('Shift'), 'ui.help.k.run'], [K('C'), 'ui.help.k.crouch'], [K('Space'), 'ui.help.k.jump'], [K('Ctrl'), 'ui.help.k.hyper'], [K('Q', '/', 'E'), 'ui.help.k.qe']] },
       { title: 'ui.help.g.ui', rows: [[K('E'), 'ui.help.k.edu'], [K('H'), 'ui.help.k.hide'], [K('?'), 'ui.help.k.help'], [K('Esc'), 'ui.help.k.esc']] },
     ];
     const grid = h('div', { class: 'ui-help-grid' });
@@ -438,9 +443,14 @@ export class UiShell {
 
   private setMode(m: CameraModeId): void {
     if (m === this.state.mode) return;
-    this.state.mode = m; this.modeSeg.set(m); this.syncOverlay();
+    this.state.mode = m; this.modeSeg.set(m); this.releaseFocusForPlay(); this.syncOverlay();
     this.handlers.setCameraMode(m);
     this.toast(t('ui.toast.mode', { name: t(`ui.mode.${m}`) }));
+  }
+  /** Walk / fly use Space, arrows and WASD: a dock button that keeps the focus would swallow or act on them. */
+  private releaseFocusForPlay(): void {
+    const m = this.state.mode, a = document.activeElement;
+    if ((m === 'walk' || m === 'fly') && a instanceof HTMLElement && this.shell.contains(a) && !(a instanceof HTMLInputElement && a.type === 'range')) a.blur();
   }
   private setPreset(p: LightingPresetId): void {
     this.state.preset = p; this.presetMenu.set(p);
@@ -476,7 +486,7 @@ export class UiShell {
   private toggleHidden(): void {
     this.hiddenAll = !this.hiddenAll;
     this.syncVisibility();
-    if (this.hiddenAll && !this.hiddenToastShown) { this.hiddenToastShown = true; this.toast(t('ui.toast.hidden'), 3200); }
+    if (this.hiddenAll && !this.hiddenToastShown) { this.hiddenToastShown = true; this.toast(t(this.coarse() ? 'ui.toast.hidden.touch' : 'ui.toast.hidden'), 3200); }
   }
   private async doExport(): Promise<void> {
     if (this.exporting) return;
@@ -564,6 +574,7 @@ export class UiShell {
     this.walkPrompt.hidden = !(m === 'walk' && !this.locked);
     this.cross.hidden = !(m === 'walk' && this.locked);
     if (show) this.renderHint();
+    this.eduSw.el.querySelector('.ui-kbd')?.classList.toggle('is-muted', m === 'fly');   // E means "up" in fly mode
     this.syncVisibility();
   }
   private syncVisibility(): void {

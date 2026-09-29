@@ -1,6 +1,8 @@
 // Integrator-owned unit tests for src/core: GPU classification and the auto-quality frame probe.
 import { describe, expect, it } from 'vitest';
-import { FrameProbe, classifyGpu, lowerQuality } from '../src/core/quality.ts';
+import { FrameProbe, PROBE_COUNT, PROBE_SKIP, WARM_FRAMES_MAX, classifyGpu, lowerQuality } from '../src/core/quality.ts';
+import { DEFAULT_PARAMS } from '../src/fx/volume/params.ts';
+import { probeStale, shouldDraw, type IdleFacts } from '../src/core/idle.ts';
 
 describe('classifyGpu', () => {
   const cases: Array<[string, string]> = [
@@ -39,5 +41,41 @@ describe('FrameProbe', () => {
   it('lowerQuality stops at low', () => {
     expect(lowerQuality('ultra')).toBe('high');
     expect(lowerQuality('low')).toBe('low');
+  });
+});
+
+describe('idle gate', () => {
+  const still: IdleFacts = {
+    gate: true, ready: true, awakeFrames: 0, drifting: false, volumeConverged: true,
+    pipelineBusy: false, skyJobRunning: false, overlayChanged: false, compiling: false,
+  };
+  it('skips the frame once everything has converged', () => expect(shouldDraw(still)).toBe(false));
+  it('draws while the clouds accumulate, the shadows settle or the sky re-bakes', () => {
+    expect(shouldDraw({ ...still, volumeConverged: false })).toBe(true);
+    expect(shouldDraw({ ...still, pipelineBusy: true })).toBe(true);
+    expect(shouldDraw({ ...still, skyJobRunning: true })).toBe(true);
+  });
+  it('draws after events, in slow drift and when the overlay changed', () => {
+    expect(shouldDraw({ ...still, awakeFrames: 3 })).toBe(true);
+    expect(shouldDraw({ ...still, drifting: true })).toBe(true);
+    expect(shouldDraw({ ...still, overlayChanged: true })).toBe(true);
+  });
+  it('always draws before ready and with the gate off', () => {
+    expect(shouldDraw({ ...still, ready: false })).toBe(true);
+    expect(shouldDraw({ ...still, gate: false })).toBe(true);
+  });
+  it('holds the last frame while programs link', () => {
+    expect(shouldDraw({ ...still, compiling: true, awakeFrames: 5, volumeConverged: false })).toBe(false);
+  });
+  it('re-arms the quality probe only for a much bigger canvas', () => {
+    expect(probeStale(0, 1e7)).toBe(false);
+    expect(probeStale(1e6, 1.2e6)).toBe(false);
+    expect(probeStale(1e6, 2.1e6)).toBe(true);
+  });
+});
+
+describe('auto-quality probe timing', () => {
+  it('can finish while the clouds are still marching (warm-up + skip + samples fit in maxFrames)', () => {
+    expect(WARM_FRAMES_MAX + 1 + PROBE_SKIP + PROBE_COUNT).toBeLessThan(DEFAULT_PARAMS.maxFrames);
   });
 });

@@ -47,6 +47,11 @@
 }
 .ui-shell.is-hidden .ui-chrome *, .ui-shell.is-locked .ui-chrome * { pointer-events: none !important; }
 
+/* Touch-only way back from "hide all" (there is no H key): a faint corner button, only while hidden. */
+.ui-shell .ui-unhide { display: none; position: absolute; top: calc(10px + var(--ui-safe-top)); right: calc(10px + var(--ui-safe-right, 0px)); width: 40px; height: 40px; padding: 0; place-items: center; border-radius: 50%; opacity: 0.35; pointer-events: auto; }
+@media (pointer: coarse) { .ui-shell.is-hidden .ui-unhide { display: grid; } }
+.ui-sw-edu .ui-kbd.is-muted { opacity: 0.35; }
+
 /* ── small parts ──────────────────────────────────────────────────────────────────────────── */
 .ui-ico { display: inline-grid; place-items: center; flex: none; width: 18px; height: 18px; }
 .ui-ico svg { display: block; }
@@ -167,6 +172,8 @@
 .ui-mi.is-on .ui-mi-check { opacity: 1; }
 .ui-mi.is-on .ui-mi-label { color: #fff; }
 @keyframes ui-pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* the same pop for elements that centre themselves with translateX(-50%) (the fill mode would otherwise replace it) */
+@keyframes ui-pop-c { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translateX(-50%); } }
 
 /* switches */
 .ui-sw-track { position: relative; width: 28px; height: 16px; border-radius: 8px; background: rgba(255, 255, 255, 0.16); transition: background var(--ui-t); flex: none; }
@@ -247,7 +254,7 @@
   position: absolute; left: 50%; top: 68%; transform: translateX(-50%);
   padding: 11px 20px; border-radius: 22px; font-size: 14px; letter-spacing: 0.01em; white-space: nowrap;
   pointer-events: none;   /* clicks fall through to the canvas: that click starts the walk */
-  animation: ui-pop 0.5s ease both;
+  animation: ui-pop-c 0.5s ease both;
 }
 .ui-walk-hint {
   position: absolute; left: 50%; bottom: calc(86px + var(--ui-safe-bottom)); transform: translateX(-50%);
@@ -398,7 +405,13 @@
   .ui-modal-card { padding: 16px 18px 18px; }
   .ui-loading .ui-ld-title { letter-spacing: 0.4em; }
 }
-@media (pointer: coarse) { .ui-btn { min-height: 40px; } }
+@media (pointer: coarse) {
+  .ui-btn { min-height: 40px; }
+  /* Touch: the hint moves to the top (the joystick owns the lower-left corner) and the pointer-lock prompt is not shown. */
+  .ui-walk-hint { bottom: auto; top: calc(112px + var(--ui-safe-top)); white-space: normal; text-align: center; max-width: calc(100vw - 32px); }
+  .ui-walk.is-locked .ui-walk-hint, .ui-shell:not(.is-idle) .ui-walk.is-locked .ui-walk-hint { bottom: auto; }
+  .ui-walk-prompt { display: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .ui-shell *, .ui-modal, .ui-modal *, .ui-loading, .ui-loading * { animation: none !important; transition-duration: 0ms !important; }

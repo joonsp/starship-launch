@@ -46,12 +46,16 @@ These are useful for deep links and scripted screenshots.
 | `ui` | `0` hides all interface chrome |
 | `drift` | `1` starts in slow-drift mode |
 | `probe` | `0` disables the automatic quality probe |
+| `idle` | `0` draws every frame (turns the idle gate off; see *How it renders*) |
 | `bake` | Sky cube face size override, e.g. `512` (only for software-rendered QA) |
 
 Example: `?preset=night&mode=walk&quality=low&edu=1&lang=fi&ui=0`.
 
 `window.app` exposes `{ ctx, controller, modules, pipeline, ui, setPreset, setQuality, setMode, setEdu, setLang,
-setDrift, exportStill, ready, frames }` for automation. `scripts/qa-shoot.mjs` takes headless screenshots with
+setDrift, exportStill, invalidate, stats, ready, frames, drawn }` for automation. `frames` counts animation ticks
+and `drawn` counts frames actually drawn (the idle gate skips the rest); `stats` holds the draw calls and triangles of
+the last drawn frame and `stats.idle`. A script that changes the image without an event (poking a module's uniforms)
+must call `app.invalidate()`, or start the page with `?idle=0`. `scripts/qa-shoot.mjs` takes headless screenshots with
 scripted steps:
 
 ```sh
@@ -72,6 +76,7 @@ VIEWPORT=1280x720 node scripts/qa-shoot.mjs steps.json out/shots \
 | `H` | Hide or show all interface chrome |
 | `?` | Keyboard help |
 | `Esc` | Close panels and menus; release the mouse |
+| `Ctrl` | Walk mode: toggle the 40 m/s hyper walk |
 
 **Orbit / Photo.** Drag to orbit, scroll to zoom, right-drag to pan. Photo mode is the calibrated reference
 camera; the first drag turns it into orbit at the same pose.
@@ -83,7 +88,8 @@ structures, tanks and fences, and you can step onto kerbs up to 0.35 m.
 **Fly.** A free drone. `WASD` moves, `Q`/`E` (or `C`/`Space`) descend and climb, `Shift` boosts x3, and the mouse
 wheel sets the speed from 1 to 200 m/s. Fly mode has no collisions.
 
-On touch devices there is a virtual joystick at the lower left, and you drag to look and double-tap to jump.
+On touch devices there is a virtual joystick at the lower left, and you drag to look and double-tap to jump. `H`
+(or the menu) hides all of it, joystick included; on touch a faint eye button in the corner brings it back.
 
 **Lens panel.** Field of view with optional dolly zoom, roll, and tilt-shift (focus height, band and blur).
 **Export still** saves a converged PNG at twice the screen resolution.
@@ -101,7 +107,9 @@ On touch devices there is a virtual joystick at the lower left, and you drag to 
   the engines rumble and the aviation beacons flash. Switching it off returns to the exact frozen still.
 - **Quality:**
   - *Auto* makes a first guess from the GPU name.
-  - After loading, a short frame-time probe steps the level down if the frame rate is too low.
+  - After loading, a short frame-time probe steps the level down if the frame rate is too low. It only samples
+    back-to-back drawn frames while the clouds are still marching (converged frames are nearly free and would hide a
+    slow GPU), and it runs again when the canvas becomes much larger (fullscreen, a 4K monitor).
   - *Low* to *Ultra* scale the pixel ratio, cloud march resolution and steps, bake resolutions, shadow map size
     and post effects.
 - **Education:** hotspots with cards (live key numbers, each marked *sourced* or *estimate*), force arrows, and
@@ -110,10 +118,17 @@ On touch devices there is a virtual joystick at the lower left, and you drag to 
 
 ## How it renders
 
-The scene is frozen, so everything that can be baked is baked. The sky, the cumulus and the cloud density are
+The scene is frozen, so everything that can be baked is baked, and **once nothing changes nothing is drawn**. The sky, the cumulus and the cloud density are
 baked once. The launch-cloud light volume is re-baked in time slices when the light changes. The shadow map is
 rendered once per preset and once after the camera settles. The volumetric clouds accumulate progressively to a
 converged full-resolution image while the camera is still.
+
+**Idle gate** (`src/core/idle.ts`, wired in `src/main.ts`). Every animation tick still runs the camera, the module
+updates and the DOM UI, but the frame graph runs only while something can still change: an event owes frames (camera,
+preset, quality, language, education, resize, tab visible again), the clouds are still accumulating (128 frames), the
+shadow map is settling after a camera move, a sky re-bake is running, the 3D overlay changed, or slow drift is on. After
+that the canvas keeps its last image and the GPU idles. While a quality change links its new shader programs the last
+frame is held (`compileAsync`), and the canvas is resized only afterwards, because a resize blanks it.
 
 Frame graph (`src/core/pipeline.ts`, specified in `src/contracts.ts`):
 

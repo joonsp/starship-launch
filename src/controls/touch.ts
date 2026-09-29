@@ -17,9 +17,10 @@ export class VirtualJoystick {
     const z = (this.zone = document.createElement('div'));
     z.setAttribute('aria-hidden', 'true');
     z.dataset.controls = 'joystick';
-    z.style.cssText = 'position:fixed;left:0;bottom:0;width:46vw;height:46vh;touch-action:none;pointer-events:auto;display:none;z-index:5;user-select:none;-webkit-user-select:none';
+    // z-index -1: below the UI shell (which is click-transparent except for its own controls), so the dock stays tappable
+    z.style.cssText = 'position:fixed;left:0;bottom:0;width:46vw;height:46vh;touch-action:none;pointer-events:auto;display:none;z-index:-1;user-select:none;-webkit-user-select:none';
     const b = (this.base = document.createElement('div'));
-    b.style.cssText = `position:absolute;width:${this.radius * 2}px;height:${this.radius * 2}px;left:calc(24px + env(safe-area-inset-left,0px));bottom:calc(64px + env(safe-area-inset-bottom,0px));border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);backdrop-filter:blur(2px);pointer-events:none`;
+    b.style.cssText = `position:absolute;width:${this.radius * 2}px;height:${this.radius * 2}px;left:calc(24px + env(safe-area-inset-left,0px));bottom:calc(96px + env(safe-area-inset-bottom,0px));border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);backdrop-filter:blur(2px);pointer-events:none`;
     const k = (this.knob = document.createElement('div'));
     k.style.cssText = 'position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:rgba(255,255,255,.5);box-shadow:0 1px 6px rgba(0,0,0,.35);pointer-events:none';
     b.appendChild(k);

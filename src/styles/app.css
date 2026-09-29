@@ -29,6 +29,7 @@ html, body {
 }
 /* "H" / ?ui=0 hides the shell; the education layer (markers, panel, cards) follows it. */
 body.ui-hidden .edu-root { display: none !important; }
+body.ui-hidden [data-controls="joystick"] { display: none !important; }
 
 /* Start-up failure (no WebGL 2, a failed load). Shown above everything. */
 .app-fatal {
