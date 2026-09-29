@@ -15,6 +15,9 @@ uniform vec4      uPool;         // x threshold, y bias strength, z channel amou
 uniform vec4      uBounce;       // rgb = warm bounce light from the orange steam banks / fireball, w = falloff radius (m)
 uniform vec4      uReflParams;   // x reflection available, y reflection strength for wet mud, z ripple, w -
 
+uniform sampler2D uSteamShade;   // sun transmittance of the launch-cloud banks on the ground (steam-shadow.ts); R8, 1 = fully lit
+#define STEAM_HALF 4096.0
+
 #define INNER_HALF 2560.0
 #define OUTER_HALF 16000.0
 
@@ -202,6 +205,8 @@ SlSurface slTerrain(vec3 wp, float camDist) {
   vegCol *= 0.62 + 0.80 * (n3.g * 0.35 + n5.g * 0.30 + n4.g * 0.35);
   vegCol *= mix(vec3(0.80, 0.86, 0.78), vec3(1.30, 1.16, 1.12), smoothstep(0.25, 0.75, n1.b * 0.5 + n2.g * 0.5));   // broad lighter / darker marsh zones (kilometre and 300 m scale)
   vegCol = mix(vegCol, vec3(0.020, 0.018, 0.010), 0.55 * smoothstep(0.62, 0.8, n2.r * 0.6 + n3.a * 0.4));   // dark drainage hollows
+  // (the low warm key and the orange bounce push olive marsh towards brown-red: keep the mats' yellow-green, as photographed)
+  vegCol *= vec3(1.12, 1.20, 0.92);
   vegCol *= 1.0 + (c2.a - 0.5) * 0.45 * nearC + (c1.b - 0.5) * 0.30 * nearC;       // grass-tuft mottling near the camera
   vegCol *= 1.0 - 0.45 * (1.0 - smoothstep(0.55, 0.85, scrubM));                                // dark wet rim
   // dry, unmapped land: scruffy grass and soil

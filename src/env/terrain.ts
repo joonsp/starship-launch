@@ -115,9 +115,13 @@ const AT_CLIP = /* glsl */`
 
 const AT_COLOR = /* glsl */`
   {
-    vec3 bed = mix(slS.albedo, vec3(0.05, 0.036, 0.026), 0.6) * exp(-vec3(1.5, 2.3, 3.1) * slS.depth * 1.7);
-    // deeper open water (bays, lagoons): the body turns dark blue-green instead of showing the brown bed
-    bed = mix(bed, vec3(0.020, 0.048, 0.058), smoothstep(0.25, 0.6, slS.depth) * 0.45);
+    // Tidal pools are shallow and turbid: the bed shows through only in the first decimetres, deeper down the water is the
+    // colour of the suspended silt (in-scattered light), a brownish olive, never black. This keeps the pools readable
+    // from above (orbit) and gives the photo's lagoon its dark brown body under the sky reflection.
+    vec3 bed = mix(slS.albedo, vec3(0.05, 0.036, 0.026), 0.5) * exp(-vec3(1.2, 1.9, 2.6) * slS.depth * 1.2);
+    bed = mix(bed, vec3(0.092, 0.074, 0.050), (1.0 - exp(-slS.depth * 2.6)) * 0.85);
+    // open bays and lagoons: a hint of teal in the deepest water
+    bed = mix(bed, vec3(0.020, 0.048, 0.058), smoothstep(0.35, 0.8, slS.depth) * 0.15);
     diffuseColor.rgb = mix(slS.albedo, bed, slS.water);
     if (uViewMode == VIEW_CLAY) diffuseColor.rgb = vec3(0.7);
   }
@@ -139,11 +143,24 @@ const AT_DEBUG = /* glsl */`
     else if (uReflParams.w < 11.5) outgoingLight = reflectedLight.indirectDiffuse;
     else if (uReflParams.w < 12.5) outgoingLight = reflectedLight.indirectSpecular + reflectedLight.directSpecular;
     else if (uReflParams.w < 13.5) outgoingLight = outgoingLight;
+    else if (uReflParams.w > 16.5) outgoingLight = reflectedLight.indirectSpecular;
+    else if (uReflParams.w > 15.5) outgoingLight = reflectedLight.directSpecular;
+    else if (uReflParams.w > 14.5) { vec4 dbc = uReflMat * vec4(vSlWorldPos, 1.0); outgoingLight = texture(uReflect, dbc.xy / dbc.w).rgb; }
     else outgoingLight = vec3(isnan(outgoingLight.r) ? 1.0 : 0.0, isinf(outgoingLight.r) ? 1.0 : 0.0, min(outgoingLight.r, 1.0));
   } else if (uReflParams.w > 0.5) {
     if (uReflParams.w < 1.5 || uReflParams.w > 3.5) outgoingLight = vec3(slS.nW.x * 8.0 + 0.5, slS.nW.z * 8.0 + 0.5, 0.5);
     else if (uReflParams.w < 2.5) outgoingLight = vec3(slS.rough, slS.wet, slS.water);
     else outgoingLight = slS.albedo * 2.0;
+  }
+`;
+
+// Runs right after the scene's own (sun) lights and before the plume line light and the IBL: the launch-cloud banks shade the
+// ground from the low sun (sun only: the fire's line light, the sky and the steam bounce are not blocked by it).
+const AT_LIGHTS_BEGIN = /* glsl */`
+  {
+    float slSteamT = texture(uSteamShade, vSlWorldPos.xz * (0.5 / STEAM_HALF) + 0.5).r;
+    reflectedLight.directDiffuse *= slSteamT;
+    reflectedLight.directSpecular *= slSteamT;
   }
 `;
 
@@ -156,26 +173,30 @@ const AT_LIGHTS_END = /* glsl */`
     reflectedLight.indirectSpecular *= mix(0.05, 0.30, clamp(slS.wet * 1.4, 0.0, 1.0)) + 0.7 * slS.water;
     float slWaterK = (uViewMode == VIEW_CLAY) ? 0.0 : slS.water;
     float slSheenK = (uViewMode == VIEW_CLAY) ? 0.0 : slS.wet * uReflParams.y * (1.0 - slS.water) * (1.0 - slS.rough);
-    totalEmissiveRadiance += diffuseColor.rgb * slBounce(vSlWorldPos) * (1.0 - slWaterK);
+    totalEmissiveRadiance += diffuseColor.rgb * slBounce(vSlWorldPos) * (1.0 - 0.4 * slWaterK);
+
     if (slWaterK + slSheenK > 0.001) {
       vec3 slR = reflect(-slV, slS.nW);
       vec3 slRefl;
       if (uReflParams.x > 0.5) {
         vec4 rc = uReflMat * vec4(vSlWorldPos, 1.0);
         vec2 ruv = rc.xy / rc.w + slS.nW.xz * 1.4;
-        // 9-tap disc blur (the mirrored steam is rendered at a low resolution: hide its texels), wider for glossy wet mud
-        float blur = mix(0.0032, 0.0075, slSheenK * (1.0 - slWaterK));
-        slRefl = texture(uReflect, ruv).rgb * 0.20;
-        for (int i = 0; i < 8; i++) {
-          float ang = float(i) * 0.785398 + 0.4;
-          slRefl += texture(uReflect, ruv + vec2(cos(ang), sin(ang) * 1.6) * blur).rgb * 0.10;
+        // Wide, vertically smeared disc blur: ripples stretch a reflection along the view direction, and the mirrored steam
+        // is marched at a low resolution (blocky), so an open-water mirror reads as soft, streaky, sky-and-cloud-like.
+        // Glossy wet mud keeps a tighter, rounder kernel.
+        vec2 blur = mix(vec2(0.0105, 0.0250), vec2(0.0075, 0.0120), slSheenK * (1.0 - slWaterK));
+        slRefl = texture(uReflect, ruv).rgb * 0.10;
+        for (int i = 0; i < 12; i++) {
+          float fi = float(i) + 0.5;
+          float rr = sqrt(fi / 12.0), ang = fi * 2.39996;
+          slRefl += texture(uReflect, ruv + vec2(cos(ang), sin(ang)) * rr * blur).rgb * 0.075;
         }
       } else {
         slRefl = textureLod(uSkyCube, slR, 1.0).rgb;
       }
       // far water (bays, the Gulf seen at a grazing angle): a wind-roughened surface reflects far less than a flat mirror
       slF *= (1.0 - 0.55 * smoothstep(0.02, 0.32, 0.02 + slDist / 9000.0)) * mix(1.0, 0.22, smoothstep(250.0, 2500.0, slDist));
-      float slRw = slF * slWaterK;
+      float slRw = slF * slWaterK * 0.85;
       reflectedLight.directDiffuse *= 1.0 - slRw;
       reflectedLight.indirectDiffuse *= 1.0 - slRw;
       reflectedLight.indirectSpecular *= (1.0 - slWaterK) * (1.0 - slSheenK);
@@ -225,7 +246,7 @@ export class Terrain {
   readonly u: Record<string, THREE.IUniform> = {};
   readonly coastTex: THREE.DataTexture;
 
-  constructor(globals: Globals, site: SiteData, splats: SplatSet, noise: THREE.Texture, cell: THREE.Texture, waves: THREE.Texture, skyCube: THREE.Texture, hazeCube: THREE.Texture, tuning: TerrainTuning = DEFAULT_TERRAIN_TUNING) {
+  constructor(globals: Globals, site: SiteData, splats: SplatSet, noise: THREE.Texture, cell: THREE.Texture, waves: THREE.Texture, skyCube: THREE.Texture, hazeCube: THREE.Texture, steamShade: THREE.Texture, tuning: TerrainTuning = DEFAULT_TERRAIN_TUNING) {
     const coast = envCoastProfile(site);
     this.coastTex = new THREE.DataTexture(coast, COAST_N, 1, THREE.RedFormat, THREE.FloatType);
     this.coastTex.minFilter = this.coastTex.magFilter = THREE.NearestFilter;
@@ -234,6 +255,7 @@ export class Terrain {
       uMaskIA: { value: splats.innerA }, uMaskIB: { value: splats.innerB }, uMaskOA: { value: splats.outerA }, uMaskOB: { value: splats.outerB },
       uNoise: { value: noise }, uCell: { value: cell }, uWave: { value: waves }, uCoast: { value: this.coastTex },
       uReflect: { value: null }, uReflMat: { value: new THREE.Matrix4() }, uSkyCube: { value: skyCube }, uHazeCube: { value: hazeCube },
+      uSteamShade: { value: steamShade },
       uPool: { value: new THREE.Vector4(0, 0, 0, 0) }, uBounce: { value: new THREE.Vector4(0, 0, 0, 700) }, uReflParams: { value: new THREE.Vector4(0, 0, 0, 0) },
     };
     this.setTuning(tuning);
@@ -248,6 +270,7 @@ export class Terrain {
         .replace('#include <color_fragment>', `#include <color_fragment>\n${AT_COLOR}`)
         .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\n${AT_ROUGHNESS}`)
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\n${AT_NORMAL}`)
+        .replace('#include <lights_fragment_begin>', `#include <lights_fragment_begin>\n${AT_LIGHTS_BEGIN}`)
         .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>\n${AT_LIGHTS_END}`)
         .replace('#include <opaque_fragment>', `${AT_DEBUG}\n${HAZE_APPLY}\n#include <opaque_fragment>`);
     };
