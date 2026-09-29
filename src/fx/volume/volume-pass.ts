@@ -15,6 +15,12 @@
 //              depth-aware bilateral upsample of the current low-res frame.
 // Once params.maxFrames frames are accumulated (still camera, frozen scene) steps 1-2 are skipped:
 // the pass then costs one full-screen composite.
+//
+// Planar reflections (renderView, called by core's ctx.renderView for the tidal-pool mirror) use the same three
+// steps on their own buffers, progressively: env renders the mirror only when the camera moves, so the first call
+// snapshots the mirror's opaque colour + depth and camera, and every drawn frame after it marches one more
+// sub-pixel offset and re-composites the steam into the mirror target, until REFL_FRAMES are accumulated (or
+// forever with EMA in drift mode). `converged` stays false until the final mirror has been drawn once.
 import * as THREE from 'three';
 import { Pass } from 'postprocessing';
 import common from '../../shaders/common.glsl?raw';
@@ -23,9 +29,10 @@ import vertFullscreen from './shaders/fullscreen.vert.glsl?raw';
 import fragMarch from './shaders/march.frag.glsl?raw';
 import fragScatter from './shaders/scatter.frag.glsl?raw';
 import fragComposite from './shaders/composite.frag.glsl?raw';
-import fragViewComposite from './shaders/view-composite.frag.glsl?raw';
+import fragReflectCopy from './shaders/reflect-copy.frag.glsl?raw';
 import { DILUTION, OCC_BLOCK, type VolumeBaker } from './bakes.ts';
 import { DEFAULT_PARAMS, TEMP_KELVIN_MAX, TEMP_KELVIN_MIN, type VolumeParams } from './params.ts';
+import { DEFAULT_PAD_YAW } from './puffs.ts';
 
 /** One triangle covering the viewport (clip-space positions; the vertex shader derives vUv). */
 const FULLSCREEN_TRIANGLE = (() => {
@@ -52,6 +59,30 @@ function mrt(w: number, h: number): THREE.WebGLRenderTarget {
     minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter,
     depthBuffer: false, stencilBuffer: false, generateMipmaps: false,
   });
+}
+
+/** Accumulated frames of a still planar-reflection view (exportStill draws 32 frames: keep it below that). */
+export const REFL_FRAMES = 28;
+
+/** Progressive state of the planar-reflection view (see VolumePass.renderView). */
+interface ReflView {
+  /** The caller's mirror target (opaque scene + depthTexture); the steam is composited into it in place. */
+  target: THREE.WebGLRenderTarget;
+  /** Frozen copy of the mirror camera at the last renderView call. */
+  readonly cam: THREE.PerspectiveCamera;
+  /** rgb = the mirror's opaque colour, a = its linear depth (m). */
+  readonly copy: THREE.WebGLRenderTarget;
+  readonly cur: THREE.WebGLRenderTarget;
+  readonly acc: THREE.WebGLRenderTarget;
+  order: [number, number][];
+  steps: number;
+  /** Iterations since the last reset. */
+  n: number;
+  needsClear: boolean;
+  /** The final iteration has been sampled by one drawn main frame (the pools read the mirror in the RenderPass). */
+  shown: boolean;
+  /** Tick of the last iteration (renderView iterates once itself; render() then skips that tick). */
+  tick: number;
 }
 
 /** Visit order of the K x K sub-pixel offsets: spatially spread so partial coverage looks even. */
@@ -102,10 +133,14 @@ export class VolumePass extends Pass {
   private readonly clearMat: THREE.ShaderMaterial;
   private readonly compMat: THREE.ShaderMaterial;
   private readonly viewMarchMat: THREE.ShaderMaterial;
-  private readonly viewCompMat: THREE.ShaderMaterial;
-  private viewRT: THREE.WebGLRenderTarget | null = null;
-  private readonly orthoCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  private readonly reflScatterMat: THREE.ShaderMaterial;
+  private readonly reflCompMat: THREE.ShaderMaterial;
+  private readonly reflCopyMat: THREE.ShaderMaterial;
+  private readonly reflJitter = new THREE.Vector2(0.5, 0.5);
+  private refl: ReflView | null = null;
   private frame = 0;
+  /** Drawn main frames (render() calls). */
+  private tick = 0;
 
   constructor(params: VolumeParams = { ...DEFAULT_PARAMS }) {
     super('VolumePass');
@@ -128,7 +163,8 @@ export class VolumePass extends Pass {
       uSunDir: V3(), uSunColor: { value: new THREE.Color() }, uSkyAmb: { value: new THREE.Color() },
       uGroundAmb: { value: new THREE.Color() }, uPlumeLight: { value: new THREE.Color() },
       uFireLight: { value: new THREE.Color() }, uFireCentre: V3(), uGains: { value: new THREE.Vector4(1, 1, 1, 1) },
-      uSunTauScale: { value: 1 }, uShapeP: V3(), uDetailP: V3(), uNearFade: { value: params.nearFade },
+      uSunTauScale: { value: 1 }, uShapeP: V3(), uDetailP: V3(), uBillowP: V3(), uNearFade: { value: params.nearFade },
+      uTrenchAxis: { value: new THREE.Vector2(Math.cos(DEFAULT_PAD_YAW), -Math.sin(DEFAULT_PAD_YAW)) },   // the module sets scene-config's
       uViewMode: { value: 0 }, uFogColor: { value: new THREE.Color() }, uFogDensity: { value: 0 },
       uDriftOffset: V3(), uGrowth: { value: new THREE.Vector3(1, 1, 1) },
       uTempRange: { value: new THREE.Vector2(TEMP_KELVIN_MIN, TEMP_KELVIN_MAX) },
@@ -140,32 +176,37 @@ export class VolumePass extends Pass {
       uCamPos: V3(), uNear: { value: 0.5 }, uFar: { value: 60000 },
       uFullRes: { value: new THREE.Vector2(1, 1) }, uLowRes: { value: new THREE.Vector2(1, 1) },
       uJitter: { value: new THREE.Vector2(0.5, 0.5) }, uFrame: { value: 0 }, uVisit: { value: 0 }, uSteps: { value: 96 },
-      uHasDepth: { value: 0 }, uHasPlume: { value: 0 },
+      uHasDepth: { value: 0 }, uHasPlume: { value: 0 }, uPixAngle: { value: 0.001 },
     });
     this.marchMat = screenMaterial(fragMarch, { ...this.shared, ...perView() });
     this.viewMarchMat = screenMaterial(fragMarch, { ...this.shared, ...perView() });
-    this.scatterMat = screenMaterial(fragScatter, {
-      uCur0: { value: this.cur.textures[0] }, uCur1: { value: this.cur.textures[1] },
-      uLowRes: { value: new THREE.Vector2(1, 1) }, uFullRes: { value: new THREE.Vector2(1, 1) }, uJitter: { value: this.jitter },
-    }, {
+    const scatterBlend: Partial<THREE.ShaderMaterialParameters> = {
       blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendEquationAlpha: THREE.AddEquation,
       blendSrc: THREE.ConstantAlphaFactor, blendDst: THREE.OneMinusConstantAlphaFactor,
       blendSrcAlpha: THREE.ConstantAlphaFactor, blendDstAlpha: THREE.OneMinusConstantAlphaFactor,
-    });
-    this.clearMat = screenMaterial('layout(location = 0) out vec4 o0; layout(location = 1) out vec4 o1; void main() { o0 = vec4(0.0); o1 = vec4(0.0); }', {});
-    this.compMat = screenMaterial(fragComposite, {
-      uColor: { value: null }, uDepth: { value: null }, uPlume: { value: null },
-      uAcc0: { value: this.acc.textures[0] }, uAcc1: { value: this.acc.textures[1] },
-      uVol0: { value: this.black }, uVol1: { value: this.black },
+    };
+    this.scatterMat = screenMaterial(fragScatter, {
+      uCur0: { value: this.cur.textures[0] }, uCur1: { value: this.cur.textures[1] },
       uLowRes: { value: new THREE.Vector2(1, 1) }, uFullRes: { value: new THREE.Vector2(1, 1) }, uJitter: { value: this.jitter },
+    }, scatterBlend);
+    this.reflScatterMat = screenMaterial(fragScatter, {
+      uCur0: { value: null }, uCur1: { value: null },
+      uLowRes: { value: new THREE.Vector2(1, 1) }, uFullRes: { value: new THREE.Vector2(1, 1) }, uJitter: { value: this.reflJitter },
+    }, scatterBlend);
+    this.clearMat = screenMaterial('layout(location = 0) out vec4 o0; layout(location = 1) out vec4 o1; void main() { o0 = vec4(0.0); o1 = vec4(0.0); }', {});
+    const compUniforms = (jitter: THREE.Vector2): Record<string, THREE.IUniform> => ({
+      uColor: { value: null }, uDepth: { value: null }, uPlume: { value: null },
+      uAcc0: { value: null }, uAcc1: { value: null },
+      uVol0: { value: this.black }, uVol1: { value: this.black },
+      uLowRes: { value: new THREE.Vector2(1, 1) }, uFullRes: { value: new THREE.Vector2(1, 1) }, uJitter: { value: jitter },
       uNear: { value: 0.5 }, uFar: { value: 60000 }, uUseAcc: { value: 0 },
       uHasDepth: { value: 0 }, uHasPlume: { value: 0 }, uDebug: { value: 0 },
     });
-    this.viewCompMat = screenMaterial(fragViewComposite, { uVol0: { value: null } }, {
-      blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,
-      blendSrc: THREE.OneFactor, blendDst: THREE.SrcAlphaFactor,
-      blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,
-    });
+    this.compMat = screenMaterial(fragComposite, compUniforms(this.jitter));
+    this.compMat.uniforms.uAcc0.value = this.acc.textures[0];
+    this.compMat.uniforms.uAcc1.value = this.acc.textures[1];
+    this.reflCompMat = screenMaterial('#define REFLECTION\n' + fragComposite, compUniforms(this.reflJitter));
+    this.reflCopyMat = screenMaterial(fragReflectCopy, { uSrc: { value: null }, uSrcDepth: { value: null }, uNear: { value: 0.5 }, uFar: { value: 60000 } });
     // Own full-screen mesh (pmndrs' `screen` is not in its public typings).
     this.mesh = new THREE.Mesh(FULLSCREEN_TRIANGLE, this.compMat);
     this.mesh.frustumCulled = false;
@@ -210,11 +251,13 @@ export class VolumePass extends Pass {
   resetAccumulation(): void {
     this.accumulated = 0;
     this.needsClear = true;
+    const r = this.refl;
+    if (r) { r.n = 0; r.needsClear = true; r.shown = false; }
   }
 
-  /** True once the still image has converged (the march is skipped from then on). */
+  /** True once the still image has converged (the march is skipped from then on), mirror included. */
   get converged(): boolean {
-    return this.accumulated >= this.params.maxFrames && (this.ctx?.globals.uDrift.value ?? 0) === 0;
+    return this.accumulated >= this.params.maxFrames && (!this.refl || this.refl.shown) && (this.ctx?.globals.uDrift.value ?? 0) === 0;
   }
 
   /** Copy per-frame globals + params into the shared uniforms. */
@@ -253,6 +296,7 @@ export class VolumePass extends Pass {
     u.uSunTauScale.value = p.sunTauScale;
     u.uShapeP.value.set(p.shapeAmount, 1 / p.shapeScale, 0);
     u.uDetailP.value.set(p.detailAmount, 1 / p.detailScale, p.crisp);
+    u.uBillowP.value.set(p.billowAmount, 1 / Math.max(1, p.billowScale), 0);
     u.uNearFade.value = p.nearFade;
     u.uRedden.value.set(p.reddenR, p.reddenG, p.reddenB, p.reddenHaze);
     u.uDust.value.set(p.dustR, p.dustG, p.dustB, Math.max(1, p.dustHeight));
@@ -286,6 +330,8 @@ export class VolumePass extends Pass {
     u.uFar.value = cam.far;
     u.uFullRes.value.set(fullW, fullH);
     u.uLowRes.value.set(lowW, lowH);
+    // angular size of one full-res pixel (projection[5] = 1 / tan(vfov / 2)): the march's noise LOD
+    u.uPixAngle.value = 2 / (Math.max(1e-6, cam.projectionMatrix.elements[5]) * Math.max(1, fullH));
     u.uDepth.value = depth;
     u.uHasDepth.value = depth ? 1 : 0;
     u.uPlume.value = plume;
@@ -327,7 +373,13 @@ export class VolumePass extends Pass {
       }
       if (this.needsClear) { this.draw(renderer, this.clearMat, this.acc); this.needsClear = false; }
       const drift = ctx!.globals.uDrift.value > 0;
-      if (!this.converged) {
+      // planar reflection: one more progressive iteration of the mirror (unless renderView already ran one this tick)
+      const r = this.refl;
+      if (r && r.tick !== this.tick) {
+        if (r.n < REFL_FRAMES || drift) this.reflIterate(renderer);
+        else r.shown = true;   // this frame's RenderPass has sampled the final mirror
+      }
+      if (this.accumulated < this.params.maxFrames || drift) {
         const n = this.accumulated, N = this.order.length;
         const [ox, oy] = this.order[n % N];
         const K = Math.round(Math.sqrt(N));
@@ -360,47 +412,113 @@ export class VolumePass extends Pass {
     }
     this.draw(renderer, this.compMat, this.renderToScreen ? null : outputBuffer);
     renderer.autoClear = prevAuto;
+    this.tick++;
   }
 
   /**
-   * Low-quality volume for an arbitrary view (planar reflections). Call after the view's opaque scene
-   * has been rendered into `target` (which should carry a depthTexture). Marches at `scale` of the
-   * target size with `steps` steps and no accumulation, then blends dst = L + dst * T into target.
+   * The launch clouds in an arbitrary view: core's ctx.renderView uses it for the planar (tidal-pool) reflection.
+   * Call after the view's opaque scene has been rendered into `target` (which must carry a depthTexture); the steam is
+   * composited into `target` in place (out = opaque * T + L).
+   *
+   * The caller renders its mirror only when the main camera moves, so this call snapshots the view (opaque colour +
+   * linear depth, camera) and then refines it progressively: every drawn frame after it marches one more sub-pixel
+   * offset at `scale` of the target with `steps` steps, accumulates at the target's full resolution and re-composites,
+   * until REFL_FRAMES are accumulated (EMA in drift mode, so the mirrored steam drifts with the real one). Pixels not yet
+   * traced use the depth-aware bilateral upsample of the current low-res frame, as in the main view.
    */
   renderView(renderer: THREE.WebGLRenderer, camera: THREE.PerspectiveCamera, target: THREE.WebGLRenderTarget, opts: { scale?: number; steps?: number } = {}): void {
-    if (!this.ctx || !this.baker?.density || !this.baker.light) return;
-    const scale = opts.scale ?? 0.25, steps = opts.steps ?? 40;
-    const w = Math.max(1, Math.round(target.width * scale)), h = Math.max(1, Math.round(target.height * scale));
-    if (!this.viewRT) {
-      this.viewRT = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
-    } else if (this.viewRT.width !== w || this.viewRT.height !== h) this.viewRT.setSize(w, h);
-    this.syncShared();
+    if (!this.ctx || !this.baker?.density || !this.baker.light || !target.depthTexture) return;
+    const scale = THREE.MathUtils.clamp(opts.scale ?? 0.5, 0.2, 1), steps = Math.max(8, Math.round(opts.steps ?? 40));
+    const W = target.width, H = target.height;
+    const w = Math.max(1, Math.round(W * scale)), h = Math.max(1, Math.round(H * scale));
+    let r = this.refl;
+    if (!r) {
+      const cam = new THREE.PerspectiveCamera();
+      cam.matrixAutoUpdate = false;
+      const copy = new THREE.WebGLRenderTarget(W, H, {
+        type: THREE.HalfFloatType, format: THREE.RGBAFormat, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter,
+        depthBuffer: false, stencilBuffer: false, generateMipmaps: false,
+      });
+      r = this.refl = { target, cam, copy, cur: mrt(w, h), acc: mrt(W, H), order: [[0, 0]], steps, n: 0, needsClear: true, shown: false, tick: -1 };
+    }
+    r.target = target;
+    r.steps = steps;
+    if (r.copy.width !== W || r.copy.height !== H) { r.copy.setSize(W, H); r.acc.setSize(W, H); }
+    if (r.cur.width !== w || r.cur.height !== h) r.cur.setSize(w, h);
+    r.order = offsetOrder(Math.max(1, Math.ceil(Math.max(W / w, H / h) - 1e-3)));
+    // snapshot the mirror camera (the caller may move its camera before the refinement ends)
+    camera.updateMatrixWorld();
+    r.cam.matrix.copy(camera.matrixWorld);
+    r.cam.matrixWorld.copy(camera.matrixWorld);
+    r.cam.matrixWorldInverse.copy(camera.matrixWorld).invert();
+    r.cam.projectionMatrix.copy(camera.projectionMatrix);
+    r.cam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+    r.cam.near = camera.near;
+    r.cam.far = camera.far;
+    r.n = 0; r.needsClear = true; r.shown = false;
+
     const prevRT = renderer.getRenderTarget(), prevAuto = renderer.autoClear;
     renderer.autoClear = false;
-    const m = this.viewMarchMat;
-    this.setViewUniforms(m, camera, target.width, target.height, w, h, target.depthTexture ?? null, null);
-    m.uniforms.uJitter.value.set(0.5, 0.5);
-    m.uniforms.uFrame.value = this.frame;
-    m.uniforms.uVisit.value = this.frame;
-    m.uniforms.uSteps.value = steps;
-    this.mesh.material = m;
-    renderer.setRenderTarget(this.viewRT);
-    renderer.render(this.scene, this.orthoCam);
-    this.viewCompMat.uniforms.uVol0.value = this.viewRT.texture;
-    this.mesh.material = this.viewCompMat;
-    renderer.setRenderTarget(target);
-    renderer.render(this.scene, this.orthoCam);
-    this.mesh.material = this.compMat;
+    const cu = this.reflCopyMat.uniforms;
+    cu.uSrc.value = target.texture;
+    cu.uSrcDepth.value = target.depthTexture;
+    cu.uNear.value = camera.near;
+    cu.uFar.value = camera.far;
+    this.draw(renderer, this.reflCopyMat, r.copy);
+    this.syncShared();
+    this.reflIterate(renderer);
     renderer.setRenderTarget(prevRT);
     renderer.autoClear = prevAuto;
+  }
+
+  /** One progressive iteration of the planar-reflection view: march, scatter, composite into the mirror target. */
+  private reflIterate(renderer: THREE.WebGLRenderer): void {
+    const r = this.refl!;
+    const drift = (this.ctx?.globals.uDrift.value ?? 0) > 0;
+    if (r.needsClear) { this.draw(renderer, this.clearMat, r.acc); r.needsClear = false; }
+    const n = r.n, N = r.order.length, K = Math.round(Math.sqrt(N));
+    const [ox, oy] = r.order[n % N];
+    this.reflJitter.set((ox + 0.5) / K, (oy + 0.5) / K);
+    const visits = Math.floor(n / N);
+    // 1. march (low res), jitter indexed by the iteration so a still mirror converges deterministically
+    const m = this.viewMarchMat;
+    this.setViewUniforms(m, r.cam, r.acc.width, r.acc.height, r.cur.width, r.cur.height, r.target.depthTexture ?? null, null);
+    m.uniforms.uJitter.value.copy(this.reflJitter);
+    m.uniforms.uFrame.value = n % 4096;
+    m.uniforms.uVisit.value = visits + (drift ? this.frame * 0.37 : 0);
+    m.uniforms.uSteps.value = r.steps;
+    this.draw(renderer, m, r.cur);
+    // 2. scatter into the full-res mirror accumulation (running mean; EMA while drifting)
+    const su = this.reflScatterMat.uniforms;
+    su.uCur0.value = r.cur.textures[0];
+    su.uCur1.value = r.cur.textures[1];
+    su.uLowRes.value.set(r.cur.width, r.cur.height);
+    su.uFullRes.value.set(r.acc.width, r.acc.height);
+    this.reflScatterMat.blendAlpha = drift ? Math.max(1 / (visits + 1), 0.15) : 1 / (visits + 1);
+    this.draw(renderer, this.reflScatterMat, r.acc);
+    // 3. composite over the opaque copy into the mirror target (no depth test / write: its depth stays for the march)
+    const cu = this.reflCompMat.uniforms;
+    cu.uColor.value = r.copy.texture;
+    cu.uAcc0.value = r.acc.textures[0];
+    cu.uAcc1.value = r.acc.textures[1];
+    cu.uVol0.value = r.cur.textures[0];
+    cu.uVol1.value = r.cur.textures[1];
+    cu.uLowRes.value.set(r.cur.width, r.cur.height);
+    cu.uFullRes.value.set(r.acc.width, r.acc.height);
+    cu.uNear.value = r.cam.near;
+    cu.uFar.value = r.cam.far;
+    cu.uUseAcc.value = 1;
+    this.draw(renderer, this.reflCompMat, r.target);
+    r.n++;
+    r.tick = this.tick;
   }
 
   override dispose(): void {
     this.cur.dispose();
     this.acc.dispose();
-    this.viewRT?.dispose();
+    if (this.refl) { this.refl.copy.dispose(); this.refl.cur.dispose(); this.refl.acc.dispose(); this.refl = null; }
     this.black.dispose();
-    for (const m of [this.marchMat, this.scatterMat, this.clearMat, this.compMat, this.viewMarchMat, this.viewCompMat]) m.dispose();
+    for (const m of [this.marchMat, this.scatterMat, this.clearMat, this.compMat, this.viewMarchMat, this.reflScatterMat, this.reflCompMat, this.reflCopyMat]) m.dispose();
     super.dispose();
   }
 }

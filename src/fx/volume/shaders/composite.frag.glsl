@@ -7,6 +7,9 @@
 //      is weighted by its distance to this pixel and by the similarity of its opaque depth to this
 //      pixel's depth, so samples that stopped at the tower/vehicle never bleed onto the sky or the
 //      clouds behind (no halos).
+// With REFLECTION defined (the planar-reflection view, see VolumePass.renderView) uColor is a copy of the
+// mirror target: rgb = opaque colour, a = linear view depth (the target's own depth texture is attached to the
+// framebuffer this pass writes, so it cannot be sampled here); no plume, alpha 1.
 uniform highp sampler2D uColor;
 uniform highp sampler2D uDepth;
 uniform highp sampler2D uPlume;
@@ -33,8 +36,14 @@ float linDepth(float d) {
 
 void main() {
   ivec2 q = ivec2(gl_FragCoord.xy);
+#ifdef REFLECTION
+  vec4 opaque = texelFetch(uColor, q, 0);
+  float z = opaque.a;
+  opaque.a = 1.0;
+#else
   vec4 opaque = texture(uColor, vUv);
   float z = uHasDepth == 1 ? linDepth(texelFetch(uDepth, q, 0).r) : uFar;
+#endif
 
   vec4 vol = vec4(0.0, 0.0, 0.0, 1.0);
   float tp = 1.0;

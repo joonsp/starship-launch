@@ -3,7 +3,7 @@
 // renderer.setRenderTarget(rt, layer) (verified in r186: the 2nd argument selects the z layer via
 // framebufferTextureLayer, also for multi-attachment 3D targets):
 //   shape    128^3 RGBA8   tileable Perlin-Worley + Worley octaves          (never rebaked)
-//   detail    32^3 RGBA8   tileable Worley octaves + Perlin                   (never rebaked)
+//   detail    64^3 RGBA8   tileable Worley octaves + Perlin                   (never rebaked)
 //   density  res   RG16F   R = puff density, G = temperature                  (quality change)
 //   occupancy res/8 R8     max density per block, for empty-space skipping   (with density)
 //   light    res/2 2x RGBA16F  sun optical depth, plume/fire irradiance, sky/ground visibility
@@ -103,7 +103,7 @@ export class VolumeBaker {
     this.quadScene.add(this.quad);
 
     this.shape = make3D(128, 128, 128, { type: THREE.UnsignedByteType, repeat: true });
-    this.detail = make3D(32, 32, 32, { type: THREE.UnsignedByteType, repeat: true });
+    this.detail = make3D(64, 64, 64, { type: THREE.UnsignedByteType, repeat: true });
 
     const boxMin = { value: this.box.min.clone() };
     const boxSize = { value: this.box.getSize(new THREE.Vector3()) };
@@ -156,10 +156,10 @@ export class VolumeBaker {
     this.renderer.autoClear = s.auto;
   }
 
-  /** Tileable shape (128^3) and detail (32^3) noise. */
+  /** Tileable shape (128^3) and detail (64^3) noise. */
   *noiseJob(): Generator<void> {
     const t0 = performance.now();
-    for (const [rt, m, n] of [[this.shape, this.mShape, 128], [this.detail, this.mDetail, 32]] as const) {
+    for (const [rt, m, n] of [[this.shape, this.mShape, 128], [this.detail, this.mDetail, 64]] as const) {
       for (let z = 0; z < n; z++) {
         const s = this.begin();
         m.uniforms.uZ.value = (z + 0.5) / n;

@@ -72,6 +72,13 @@ export interface VolumeParams {
   /** Detail (Worley) erosion strength and scale (m per tile). */
   detailAmount: number;
   detailScale: number;
+  /**
+   * Mid-scale billow octave: how far (in normalised density) Worley cells of ~9-32 m push the steam surface in and
+   * out, and its scale (m per tile). The cauliflower lobes between the bake's voxels (~6.7 m at medium) and the
+   * detail octave; mean-neutral, so the fitted silhouette keeps its area.
+   */
+  billowAmount: number;
+  billowScale: number;
   /** Density contrast after erosion (1 = soft; 3-5 = crisp billow outlines, as dense steam). */
   crisp: number;
   /** Near-camera density fade distance (m): so a walking camera never clips into a wall of steam. */
@@ -120,6 +127,8 @@ export const DEFAULT_PARAMS: VolumeParams = {
   shapeScale: 300,
   detailAmount: 0.85,
   detailScale: 18,
+  billowAmount: 0.45,
+  billowScale: 64,
   crisp: 12,
   nearFade: 6,
   maxFrames: 128,
