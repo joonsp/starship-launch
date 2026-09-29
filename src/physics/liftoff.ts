@@ -17,8 +17,10 @@
 // under 1 % at the times that matter here, so it is left out and stated in the UI.
 //
 // Throttle: full thrust to T+35 s, then the placeholder max-Q "bucket" from physics.md (linear
-// to 70 % by T+50 s, 70 % to T+70 s). It only shapes the right-hand part of the 0-60 s charts and
-// is flagged as a placeholder in the UI (THROTTLE_BUCKET_START_S). It does not touch T_F.
+// to 70 % by T+50 s, then held at 70 %; the charts stop at T+60 s). It only shapes the right-hand
+// part of the 0-60 s charts and is flagged as a placeholder in the UI (THROTTLE_BUCKET_START_S). It
+// does not touch T_F. Because of it, and because there is no gravity turn, the model's dynamic-pressure
+// peak (about 25 kPa near T+45 s) is only an order-of-magnitude guide; real max-Q was about T+60 s.
 import { val, provenance } from '../specs.ts';
 
 // ── constants ───────────────────────────────────────────────────────────────────────────────
@@ -222,6 +224,23 @@ export const idealDeltaV = (ve: number, m0: number, m1: number): number => ve * 
 export const exhaustVelocity = (isp = P('raptor3_isp_sl_used_s')): number => isp * G0;
 /** Vacuum thrust of the booster (N): F_SL + p0 A_e (about 84.6 MN with 1.2 m nozzles). */
 export const vacuumThrust = (p: LiftoffParams = defaultParams()): number => p.thrustSL + P0 * p.nozzleAreaTotal;
+/** Vacuum thrust gain over sea level in percent (4.7 % here; the sourced Isp ratio 350/330 would suggest about 6 %). */
+export const vacuumGainPct = (p: LiftoffParams = defaultParams()): number => (vacuumThrust(p) / p.thrustSL - 1) * 100;
+/** Altitude (m) at which the ambient pressure falls to the nozzle exit pressure: above it the jet is underexpanded. */
+export const pressureMatchAltitude = (exitBar: number = P('raptor_exit_pressure_bar')): number => -H_PRESSURE * Math.log((exitBar * 1e5) / P0);
+/** Peak dynamic pressure of a simulated ascent: kPa and the time it happens (s). */
+export function peakDynamicPressure(sim: LiftoffSim = defaultSim()): { kPa: number; t: number } {
+  let best = sim.series[0];
+  for (const s of sim.series) if (s.q > best.q) best = s;
+  return { kPa: best.q / 1000, t: best.t };
+}
+/**
+ * Mass (t) when the booster engines cut off, if the booster burned at the model's full-thrust flow
+ * until `tCutoff` (s): liftoff mass minus flow x time. This keeps the rocket-equation numbers consistent
+ * with the liftoff mass and flow used everywhere else (throttling would leave more propellant burned less).
+ */
+export const massAtCutoffT = (tCutoff: number = P('meco_time_f14_s'), m0T: number = P('liftoff_mass_used_t')): number =>
+  m0T - (nominalMdot(defaultParams()) / 1000) * tCutoff;
 
 // ── acoustics ───────────────────────────────────────────────────────────────────────────────
 export const engineStartLead = (): number => P('engine_start_lead_s');

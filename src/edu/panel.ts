@@ -234,7 +234,7 @@ export class EduPanel {
   private sourcesTab(): HTMLElement {
     const root = h('div', { class: 'edu-sources' });
     root.append(h('p', { class: 'edu-lede', text: t('edu.src.intro') }));
-    root.append(h('section', { class: 'edu-callout' }, h('h3', { class: 'edu-h3', text: t('edu.src.flight.title') }), h('p', { text: t('edu.src.flight.body') })));
+    root.append(h('section', { class: 'edu-callout' }, h('h3', { class: 'edu-h3', text: t('edu.src.flight.title') }), h('p', { text: tv('edu.src.flight.body') })));
     const dec = h('ul', { class: 'edu-list' });
     for (const k of ['thrust', 'mass', 'tower', 'sun', 'height', 'ship', 'freeze']) dec.append(h('li', { text: tv(`edu.src.dec.${k}`) }));
     root.append(h('h3', { class: 'edu-h3', text: t('edu.src.decisions.title') }), dec);

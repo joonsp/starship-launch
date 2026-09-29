@@ -163,17 +163,17 @@
   "vehicle.booster.hot_stage_vent_count": {
    "v": 12,
    "unit": "count",
-   "est": "placeholder for the vent bays in the open truss; unverified"
+   "est": "Placeholder for the vent bays in the integrated open truss; the real count is not published."
   },
   "vehicle.booster.grid_fin.count": {
    "v": 3,
    "unit": "count",
-   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship"
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (Block 3: three grid fins, roughly 1.5 times the size of the Block 1 and 2 fins, integrated with the catch pins)"
   },
   "vehicle.booster.grid_fin.scale_vs_v2": {
    "v": 1.5,
    "unit": "x",
-   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship (roughly 1.5x size of Block 1/2 fins)"
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (Block 3: three grid fins, roughly 1.5 times the size of the Block 1 and 2 fins, integrated with the catch pins)"
   },
   "vehicle.booster.grid_fin.azimuth_deg": {
    "v": [
@@ -202,7 +202,7 @@
   "vehicle.booster.catch_pin_height": {
    "v": 64,
    "unit": "m",
-   "est": "in hot-stage region above CH4 tank; Pad 2 chopsticks are about 10 m shorter than Pad 1 (https://nasaspaceflight.com/2025/08/starbase-pad-2-advancements-pad-1/)"
+   "est": "Estimated near the top of the booster in the hot-stage region, about 64 m up; the position is not published (Pad 2 chopsticks are about 10 m shorter than Pad 1: https://nasaspaceflight.com/2025/08/starbase-pad-2-advancements-pad-1/)."
   },
   "vehicle.booster.raceway_count": {
    "v": 2,
@@ -349,12 +349,12 @@
   "vehicle.ship.tile.hex_size": {
    "v": 0.32,
    "unit": "m",
-   "est": "hexagon across flats about 30-35 cm"
+   "est": "Hexagon across flats about 30-35 cm (one source says about 20 cm per side, i.e. about 35 cm across flats); no official figure found."
   },
   "vehicle.ship.tile.gap": {
    "v": 0.006,
    "unit": "m",
-   "est": "about 5 mm expansion gap"
+   "est": "About 5-6 mm expansion gap, an estimate; the fact that gaps exist to allow heat expansion is from https://en.wikipedia.org/wiki/SpaceX_Starship_(spacecraft)"
   },
   "vehicle.ship.tile.count_windward": {
    "v": 18000,
@@ -394,7 +394,7 @@
   "vehicle.photo.frost_boundary_height": {
    "v": 45,
    "unit": "m",
-   "est": "(441-366)*0.61 = 46 m"
+   "est": "Read off the reference photo: frost boundary at image row 366, engine plane at row 441, about 0.61 m per pixel gives (441-366) x 0.61 = 46 m, rounded to 45 m. The pixel scale is approximate, and the boundary is where the frost changes brightness, not a measured tank position."
   },
   "pad.frame": {
    "v": "origin = Pad 2 (OLP-2) vehicle axis at ground level; x east, y up, z south",
@@ -470,7 +470,7 @@
   "pad.chopstick_reach_from_tower_face": {
    "v": 27,
    "unit": "m",
-   "src": "OSM gantry ways (carriage z -17..-8, arms z -8..+8); crowd-mapped, +-3 m"
+   "src": "https://www.openstreetmap.org/way/1540152640 (OSM gantry ways 1540152640-52: carriage z -17..-8, arms z -8..+8; crowd-mapped, +-3 m)"
   },
   "pad.chopstick_arm_length": {
    "v": 17,
@@ -532,7 +532,7 @@
     34
    ],
    "unit": "m",
-   "est": "LOW confidence; chopstick outer width ~20 m plus support columns; unsourced"
+   "est": "LOW confidence, unsourced: about 34 x 34 m from the chopstick width plus support columns."
   },
   "pad.olm_mass_pad1": {
    "v": 370,
@@ -554,7 +554,7 @@
     8
    ],
    "unit": "m (length,width,depth)",
-   "est": "LOW confidence; unsourced"
+   "est": "LOW confidence, no published dimensions: 60 x 25 x 8 m (length, width, depth). OpenStreetMap maps the trench polygon at about 84 x 18 m (way tagged construction:aeroway=flame_trench)."
   },
   "pad.deluge_runoff_pond_pad2": {
    "v": {
@@ -677,9 +677,9 @@
    "src": "OSM nitrogen/other small tanks"
   },
   "pad.vaporizers": {
-   "v": 30,
+   "v": 22,
    "unit": "count",
-   "src": "OSM name=Vaporizer, ~3x3 m each"
+   "src": "https://www.openstreetmap.org/way/1290585485 (22 ways named Vaporizer in the OpenStreetMap extract, e.g. ways 1290585485-1290585487; crowd-mapped)"
   },
   "pad.buildings_pad2": {
    "v": {
@@ -778,7 +778,7 @@
   "physics.ship_engines": {
    "v": 6,
    "unit": "count (3 SL + 3 RVac)",
-   "src": "https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship_(spacecraft)"
   },
   "physics.booster_prop_mass_b3_t": {
    "v": 3650,
@@ -818,27 +818,27 @@
   "physics.liftoff_mass_published_t": {
    "v": 5300,
    "unit": "t",
-   "src": "https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+   "src": "https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/ (\"gross liftoff mass in the vicinity of 5,300 tons\"; one secondary review, which also assumes a 3,400 t booster load, so not an official SpaceX figure)"
   },
   "physics.liftoff_mass_sum_of_parts_t": {
    "v": 5700,
    "unit": "t",
-   "est": "285+3650+120+1600+44; conflicts with published 5300"
+   "est": "285 (booster dry, est) + 3650 + 120 (ship dry, est) + 1600 + 44 (payload, est) = 5,700 t. Conflicts with the 5,300 t of one review; the dry masses are unpublished estimates."
   },
   "physics.liftoff_mass_used_t": {
    "v": 5400,
    "unit": "t",
-   "est": "midpoint chosen for the integrator; range 5300-5650"
+   "est": "Midpoint chosen for the model; plausible range 5,300-5,700 t (T/W 1.55 down to 1.45, freeze time 7.0-7.8 s). The true figure is not published."
   },
   "physics.liftoff_thrust_b3_MN": {
    "v": 80.8,
    "unit": "MN",
-   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (Block 3 max thrust 80.8 MN = 33 x 250 tf). One Flight 14 news report says \"some 16 million pounds\" in total; see physics.liftoff_thrust_f14_report_Mlbf"
   },
   "physics.liftoff_thrust_b3_Mlbf": {
    "v": 18.2,
    "unit": "Mlbf",
-   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (18.2 million lbf)"
   },
   "physics.liftoff_thrust_b2_MN": {
    "v": 73.5,
@@ -853,17 +853,17 @@
   "physics.liftoff_tw_central": {
    "v": 1.53,
    "unit": "ratio",
-   "est": "80.8e6/(5.4e6*9.80665)"
+   "est": "80.8e6 N / (5.4e6 kg x 9.80665 m/s2), from the used liftoff mass. Uncertain by about +-0.05."
   },
   "physics.liftoff_tw_range_low": {
-   "v": 1.46,
+   "v": 1.45,
    "unit": "ratio",
-   "est": "5650 t"
+   "est": "Same thrust with 5,700 t (sum of parts): 80.8e6 / (5.7e6 x 9.80665)."
   },
   "physics.liftoff_tw_range_high": {
    "v": 1.55,
    "unit": "ratio",
-   "est": "5300 t"
+   "est": "Same thrust with 5,300 t (one review's figure): 80.8e6 / (5.3e6 x 9.80665)."
   },
   "physics.raptor2_thrust_sl_tf": {
    "v": 230,
@@ -893,7 +893,7 @@
   "physics.raptor3_thrust_sl_tf": {
    "v": 250,
    "unit": "tf",
-   "src": "https://spaceflightnow.com/2026/05/12/spacex-targets-may-19-for-debut-of-starship-super-heavy-version-3-launch-pad-2/ ; https://en.wikipedia.org/wiki/SpaceX_Raptor"
+   "src": "https://spaceflightnow.com/2026/05/12/spacex-targets-may-19-for-debut-of-starship-super-heavy-version-3-launch-pad-2/ (\"250 tf (551,000 lbf)\"); https://en.wikipedia.org/wiki/SpaceX_Raptor"
   },
   "physics.raptor3_thrust_sl_kN": {
    "v": 2452,
@@ -928,7 +928,7 @@
   "physics.raptor_of_ratio": {
    "v": 3.6,
    "unit": "mass ratio",
-   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor (3.6 for Raptor 1 and 2; Raptor 3 assumed the same)"
   },
   "physics.raptor3_isp_sl_used_s": {
    "v": 330,
@@ -938,12 +938,12 @@
   "physics.raptor3_isp_vac_s": {
    "v": 350,
    "unit": "s",
-   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor ; est 348 from Ae*p0 in physics.md"
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (Block 3 booster engines: SL 330 s, Vac 350 s); https://en.wikipedia.org/wiki/SpaceX_Raptor lists 350 s for sea level and 380 s vacuum target for Raptor 3, a conflict"
   },
   "physics.raptor_nozzle_exit_diameter_m": {
    "v": 1.2,
    "unit": "m",
-   "est": "Unified with vehicle.raptor3.nozzle_exit_diameter_sl (packing constraint)"
+   "est": "Assumed 1.2 m so that 20 outer nozzles fit inside the 9 m skirt (shared with vehicle.raptor3.nozzle_exit_diameter_sl). Raptor 3 nozzle size is not published; Raptor 1 is 1.3 m (https://en.wikipedia.org/wiki/SpaceX_Raptor), and the sourced Isp ratio 350/330 would imply a somewhat larger exit area."
   },
   "physics.raptor_nozzle_exit_area_m2": {
    "v": 1.131,
@@ -953,32 +953,32 @@
   "physics.raptor_nozzle_expansion_ratio": {
    "v": 34.34,
    "unit": "ratio",
-   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor (Raptor 1)"
+   "est": "Raptor 1 sea-level value from https://en.wikipedia.org/wiki/SpaceX_Raptor (34.34, 1.3 m nozzle). The Raptor 3 value is not published; assumed the same."
   },
   "physics.raptor_chamber_temperature_K": {
    "v": 3600,
    "unit": "K",
-   "est": "methalox adiabatic flame temp at O/F 3.6, general knowledge, not fetched"
+   "est": "Estimate: adiabatic flame temperature of methane and oxygen near O/F 3.6 at high pressure (about 3,500-3,700 K). No published Raptor figure."
   },
   "physics.raptor_exit_static_temperature_K": {
    "v": 1300,
    "unit": "K",
-   "est": "isentropic, gamma 1.15-1.25 gives 1050-1700 K"
+   "est": "Isentropic expansion from 3,600 K at Mach 4.1 with gamma 1.2 gives about 1,340 K (1,050-1,700 K for gamma 1.15-1.25). Not measured."
   },
   "physics.raptor_exit_pressure_bar": {
-   "v": 0.77,
+   "v": 0.84,
    "unit": "bar",
-   "est": "isentropic gamma 1.2, Pc 300 bar, eps 34; range 0.64-0.93"
+   "est": "Isentropic estimate, gamma 1.2, chamber pressure 330 bar, expansion ratio 34 (Mach 4.1): p_exit = 330 bar x 0.00254 = 0.84 bar (0.7-1.0 for gamma 1.15-1.25 and Pc 300-350 bar). Not a published figure. Matches ambient pressure at about 1.6 km altitude."
   },
   "physics.raptor_exhaust_velocity_sl_mps": {
    "v": 3236,
    "unit": "m/s",
-   "est": "330*9.80665"
+   "est": "Effective exhaust velocity at sea level = Isp x g0 = 330 s x 9.80665 m/s2 (Isp from https://en.wikipedia.org/wiki/SpaceX_Super_Heavy)."
   },
   "physics.mdot_booster_total_kgps": {
    "v": 24968,
    "unit": "kg/s",
-   "est": "F_SL/(Isp g0)"
+   "est": "Total mass flow = sea-level thrust / (Isp x g0) = 80.8 MN / (330 s x 9.80665). Calculated, not published; a 350 s Isp would give about 5 % less."
   },
   "physics.mdot_per_engine_kgps": {
    "v": 757,
@@ -988,37 +988,37 @@
   "physics.mdot_lox_total_kgps": {
    "v": 19540,
    "unit": "kg/s",
-   "est": "mdot*3.6/4.6"
+   "est": "Total flow x 3.6/4.6 (oxidiser share at mixture ratio 3.6)."
   },
   "physics.mdot_ch4_total_kgps": {
    "v": 5428,
    "unit": "kg/s",
-   "est": "mdot/4.6"
+   "est": "Total flow x 1/4.6 (fuel share at mixture ratio 3.6)."
   },
   "physics.booster_full_thrust_burn_time_s": {
    "v": 146,
    "unit": "s",
-   "est": "3650 t / mdot"
+   "est": "3,650 t of propellant divided by the total flow of 25 t/s. Real cut-off comes earlier (about T+140 s) and real throttle settings are not published."
   },
   "physics.jet_mechanical_power_GW": {
    "v": 131,
    "unit": "GW",
-   "est": "0.5*F*ve"
+   "est": "0.5 x thrust x effective exhaust velocity = 0.5 x 80.8 MN x 3,236 m/s."
   },
   "physics.chemical_power_GW": {
    "v": 271,
    "unit": "GW",
-   "est": "5.43 t/s CH4 x 50 MJ/kg"
+   "est": "Methane flow 5.43 t/s x 50 MJ/kg lower heating value, assuming it all burns (part of it burns only after mixing with air)."
   },
   "physics.vac_thrust_booster_MN": {
    "v": 84.6,
    "unit": "MN",
-   "est": "F_SL + p0 * A_e with 33 x 1.131 m2 exit area (1.2 m nozzles): 80.8 + 3.78 MN"
+   "est": "Sea-level thrust plus p0 x exit area: 80.8 + 3.78 MN with 33 x 1.131 m2 (1.2 m nozzles). A 1.3 m nozzle would give 85.3 MN; the sourced Isp ratio 350/330 suggests about +6 %."
   },
   "physics.thrust_gain_150m_pct": {
-   "v": 0.1,
+   "v": 0.08,
    "unit": "%",
-   "est": "(101325-99530)*43.8/80.8e6"
+   "est": "(p at deck 20 m - p at 158 m) x total exit area / thrust = about 1,700 Pa x 37.3 m2 / 80.8 MN = 0.08 %."
   },
   "physics.engine_start_lead_s": {
    "v": 3,
@@ -1048,27 +1048,27 @@
   "physics.olm_height_m": {
    "v": 20,
    "unit": "m",
-   "est": "not found in a source; range 15-25 m"
+   "est": "No published figure found (searches and a fetch of the Fandom launch-mount page failed); 20 m is a recollection, plausible range 15-25 m. It sets the engine-plane start height and so the freeze time."
   },
   "physics.base_rise_to_tower_top_m": {
    "v": 125,
    "unit": "m",
-   "est": "145-20"
+   "est": "Tower height 145 m minus the assumed 20 m mount height."
   },
   "physics.t_base_at_tower_top_s": {
    "v": 6.86,
    "unit": "s",
-   "est": "integrator, M0 5400 t, s=125 m; range 6.7-7.3 (s=145: 7.4)"
+   "est": "Computed by the liftoff model (src/physics/liftoff.ts) for 5,400 t and 125 m of rise; 6.7-7.3 s over the mass range (7.4 s if the deck were at ground level)."
   },
   "physics.v_base_at_tower_top_mps": {
    "v": 37.0,
    "unit": "m/s",
-   "est": "integrator"
+   "est": "Computed by the liftoff model at that time."
   },
   "physics.a_net_at_tower_top_mps2": {
    "v": 5.66,
    "unit": "m/s2",
-   "est": "integrator; proper accel 1.58 g"
+   "est": "Computed by the liftoff model; proper acceleration there is 1.58 g."
   },
   "physics.photo_time_estimate_s": {
    "v": "7-8",
@@ -1078,57 +1078,57 @@
   "physics.max_q_time_f14_s": {
    "v": 58,
    "unit": "s",
-   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+   "src": "https://www.spacelaunchschedule.com/launch/starship-starlink-group-31-1-starship-flight-14/ (Max-Q at T+58 s, MECO T+2:20, stage separation T+2:22; the Wikipedia flight page gives no max-Q time, and live blogs say \"about T+1 min\")"
   },
   "physics.meco_time_f14_s": {
    "v": 140,
    "unit": "s",
-   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+   "src": "https://spaceflightnow.com/2026/09/28/starship-returns-to-earth-rocket-splashes-down-north-of-hawaii-after-three-hour-flight/ (\"Two minutes and 20 seconds after liftoff, the rest of the first stage engines began shutting down\"); https://en.wikipedia.org/wiki/Starship_flight_test_14 (MECO and hot staging about T+2:20)"
   },
   "physics.hot_staging_time_f14_s": {
    "v": 142,
    "unit": "s",
-   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+   "src": "https://www.nasaspaceflight.com/2026/09/starship-flight-14-orbit/ (\"Hot-staging executed cleanly at T+2m22s\"); https://www.spacelaunchschedule.com/launch/starship-starlink-group-31-1-starship-flight-14/"
   },
   "physics.max_q_model_kPa": {
-   "v": 30,
+   "v": 25,
    "unit": "kPa",
-   "est": "2-D model"
+   "est": "Peak dynamic pressure of this app's vertical-only liftoff model (src/physics/liftoff.ts), about 25 kPa near T+45 s. It has no gravity turn and uses a placeholder throttle-down, so it is an order-of-magnitude guide, not a Starship figure."
   },
   "physics.meco_alt_est_km": {
    "v": 60,
    "unit": "km",
-   "est": "model 55 km; recalled HUD 65-70 km (unverified); range 55-70"
+   "est": "Estimate from this app's ascent model (about 55 km) and range 55-70 km; no published altitude at staging was found."
   },
   "physics.meco_speed_est_mps": {
    "v": 1725,
    "unit": "m/s",
-   "est": "model; recalled HUD ~1.6-1.8 km/s"
+   "est": "Estimate from this app's ascent model, range about 1.6-1.8 km/s; no published speed at staging was found."
   },
   "physics.deluge_water_pad1_gal": {
-   "v": 350000,
+   "v": 358000,
    "unit": "US gal",
-   "src": "https://interestingengineering.com/innovation/spacex-starship-water-deluge-system ; https://gizmodo.com/spacex-starship-rocket-artemis-mechazilla-launch-guide-1850249132"
+   "src": "https://www.faa.gov/media/72826 (FAA Written Re-evaluation of the 2022 PEA: a maximum of about 358,000 gallons; earlier documents and news say 350,000, e.g. https://interestingengineering.com/innovation/spacex-starship-water-deluge-system). This is the Pad 1 design figure; Pad 2 filings allow more."
   },
   "physics.deluge_water_pad1_kg": {
-   "v": 1325000.0,
+   "v": 1355000.0,
    "unit": "kg",
-   "est": "350000*3.785"
+   "est": "358,000 US gal x 3.785 L/gal x 1 kg/L."
   },
   "physics.deluge_vaporised_fraction": {
-   "v": 0.9,
+   "v": 0.92,
    "unit": "fraction (>90%)",
-   "src": "https://www.faa.gov/media/72826 via search summary; unverified"
+   "src": "https://www.faa.gov/media/72826 (SpaceX estimates 92 % of the 358,000 gallons is vaporised; quoted in search excerpts of the FAA document, the PDF itself was not fetchable)"
   },
   "physics.deluge_pad2_test_flow_gpm": {
    "v": 650000,
    "unit": "US gal/min",
-   "src": "https://www.basenor.com/blogs/news/spacex-tests-starship-pad-2-flame-deflector-at-650-000-gpm (cites third-party X post; low reliability)"
+   "src": "https://www.basenor.com/blogs/news/spacex-tests-starship-pad-2-flame-deflector-at-650-000-gpm (a 10 July 2026 test, citing a third-party post on X; unconfirmed, low reliability)"
   },
   "physics.deluge_pad2_test_flow_m3ps": {
    "v": 41,
    "unit": "m3/s",
-   "est": "650000*3.785e-3/60"
+   "est": "650,000 US gal/min x 3.785e-3 m3/gal / 60 s = 41 m3/s, from the unconfirmed report above."
   },
   "physics.launch_table_mass_pad1_t": {
    "v": 370,
@@ -1136,24 +1136,24 @@
    "src": "https://en.wikipedia.org/wiki/SpaceX_Starbase"
   },
   "physics.deluge_vaporisation_energy_J": {
-   "v": 3400000000000.0,
+   "v": 3240000000000.0,
    "unit": "J",
-   "est": "1.325e6 kg x 2.6 MJ/kg"
+   "est": "Vaporised water 0.92 x 1.355e6 kg x 2.6 MJ/kg (heating from 25 C to 100 C plus latent heat 2.26 MJ/kg)."
   },
   "physics.combustion_h2o_tps": {
    "v": 11,
    "unit": "t/s",
-   "est": "upper bound, full oxidation of 19.5 t/s LOX"
+   "est": "Upper bound: 19.5 t/s of oxygen fully burning methane (CH4 + 2 O2 -> CO2 + 2 H2O) gives 19.5 x 36/64 = 11 t/s of water. Fuel-rich exhaust makes less until it mixes with air."
   },
   "physics.combustion_co2_tps": {
    "v": 13.4,
    "unit": "t/s",
-   "est": "upper bound"
+   "est": "Upper bound: 19.5 t/s of oxygen x 44/64 = 13.4 t/s of carbon dioxide, if all carbon ends as CO2."
   },
   "physics.sound_speed_25C_mps": {
    "v": 346,
    "unit": "m/s",
-   "est": "331.3*sqrt(1+25/273.15)"
+   "est": "331.3 x sqrt(1 + 25/273.15) = 346 m/s. The 25 C morning air temperature at launch is assumed, not measured."
   },
   "physics.sound_speed_15C_mps": {
    "v": 340,
@@ -1163,37 +1163,37 @@
   "physics.acoustic_eff_central": {
    "v": 0.005,
    "unit": "fraction",
-   "est": "0.2-1% rule of thumb (NASA SP-8072, recalled, not fetched)"
+   "est": "0.5 % chosen inside the 0.2-0.8 % range of NASA SP-8072 (https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19710023719.pdf); an empirical rule of thumb, not a Starship measurement."
   },
   "physics.sound_power_level_dB": {
    "v": 208,
    "unit": "dB re 1 pW",
-   "est": "10log10(0.005*1.31e11/1e-12); range 204-211"
+   "est": "10 log10(0.005 x 1.31e11 W / 1e-12 W) = 208 dB re 1 pW; range 204-210 dB for 0.2-0.8 % efficiency."
   },
   "physics.spl_100m_dB": {
    "v": 160,
    "unit": "dB",
-   "est": "Lw-20log r-8, free field, no deluge; overpredicts far field"
+   "est": "Sound power level minus 20 log10(100 m) minus 8 (hemispherical free-field spreading), no deluge or shielding. Overpredicts the far field."
   },
   "physics.spl_1km_dB": {
    "v": 140,
    "unit": "dB",
-   "est": "same model"
+   "est": "Same free-field spreading model at 1 km."
   },
   "physics.spl_10km_measured_dB": {
    "v": 105,
    "unit": "dB",
-   "src": "https://old-man-par.com/2024/12/11/starship-measured-at-ten-times-falcon-9-sound-level/ (Gee et al., JASA-EL Nov 2024; Port Isabel 6.2 mi)"
+   "src": "https://pubs.aip.org/asa/jel/article/4/11/113601/3320807/Starship-super-heavy-acoustics-Far-field-noise (Gee et al., JASA Express Letters 4, 113601, Nov 2024: Flight 5, Oct 2024, far-field 9.7-35.5 km); about 105 dB at Port Isabel, ~10 km, via https://old-man-par.com/2024/12/11/starship-measured-at-ten-times-falcon-9-sound-level/ (which does not state the exact metric, taken here as maximum SPL)"
   },
   "physics.spl_20km_measured_dB": {
    "v": 90,
    "unit": "dB",
-   "src": "same (Laguna Vista 12.4 mi)"
+   "src": "https://old-man-par.com/2024/12/11/starship-measured-at-ten-times-falcon-9-sound-level/ (about 90 dB at Laguna Vista, ~20 km, Flight 5 far-field measurements; https://pubs.aip.org/asa/jel/article/4/11/113601/3320807/Starship-super-heavy-acoustics-Far-field-noise)"
   },
   "physics.near_field_dB": {
    "v": 200,
    "unit": "dB",
-   "src": "https://en.wikipedia.org/wiki/Sound_suppression_system ('approaching 200 dB' at launch pads)"
+   "src": "https://en.wikipedia.org/wiki/Sound_suppression_system (general launch-pad statement: \"noise levels approaching 200 dB\"; not a Starship measurement)"
   },
   "physics.faa_lmax_contour_dB": {
    "v": 134,
@@ -1201,24 +1201,24 @@
    "src": "https://www.faa.gov/media/72826 via search summary; contour within Starbase property"
   },
   "physics.sound_front_radius_at_photo_m": {
-   "v": 3800,
+   "v": 3530,
    "unit": "m",
-   "est": "346 m/s x (T+7.5 + 3) s from ignition"
+   "est": "c x (T_freeze + 3 s) = 346 m/s x (7.2 + 3) s from the ignition sound, from the liftoff model."
   },
   "physics.plume_radiant_flux_100m_kWm2": {
    "v": 40,
    "unit": "kW/m2",
-   "est": "order of magnitude: eps 0.2, T 2500 K, view factor 0.1"
+   "est": "Order-of-magnitude estimate only, no published measurement: emissivity 0.2 x sigma T^4 at 2,500 K (2.2 MW/m2) x view factor 0.1 = about 40 kW/m2; ignores steam and atmospheric absorption."
   },
   "physics.plume_radiant_flux_1km_kWm2": {
    "v": 0.4,
    "unit": "kW/m2",
-   "est": "order of magnitude"
+   "est": "Inverse-square scaling of the 100 m estimate (x 1/100)."
   },
   "physics.raptor_exit_mach": {
    "v": 4.1,
    "unit": "Mach",
-   "est": "isentropic gamma 1.2, expansion ratio 34"
+   "est": "Isentropic estimate, gamma 1.2, expansion ratio 34.3 (assumed from Raptor 1)."
   },
   "physics.flight14_liftoff_utc": {
    "v": "2026-09-28T12:48:59Z",
@@ -1258,7 +1258,7 @@
   "scene.t_freeze": {
    "v": 7.2,
    "unit": "s after liftoff",
-   "est": "Liftoff integrator: base climbs from OLM deck (~20 m est) to 158 m at ~T+7.2 s (5400 t, 80.8 MN). Physics module recomputes; the test asserts consistency."
+   "est": "Liftoff model: engine plane climbs from the mount deck (20 m, est) to 158 m at about T+7.2 s for 5,400 t and 80.8 MN (7.0-7.8 s for 5,300-5,700 t). The physics module recomputes it and a test checks it."
   },
   "scene.camera.pos": {
    "v": [
@@ -1297,7 +1297,7 @@
   "scene.olm_deck_height": {
    "v": 20,
    "unit": "m",
-   "est": "Low-confidence recollection (NSF forum not reachable); used for the vehicle's rest height and the OLM model"
+   "est": "No published figure found; 20 m is a low-confidence estimate (range 15-25 m); it sets the vehicle rest height and the mount model."
   },
   "scene.trench_axis": {
    "v": "bearing 123 / 303 deg (ESE-WNW), world direction (0.838, 0, 0.546)",
@@ -1331,6 +1331,16 @@
    "v": -33.1,
    "unit": "deg (three.js rotation.y)",
    "src": "atan2(0.546, 0.838) from the OSM trench polygon; rotation.y = -33.1 deg maps local +x onto the trench axis"
+  },
+  "physics.liftoff_thrust_f14_report_Mlbf": {
+   "v": 16,
+   "unit": "Mlbf",
+   "src": "https://spaceflightnow.com/2026/09/28/starship-returns-to-earth-rocket-splashes-down-north-of-hawaii-after-three-hour-flight/ (\"some 16 million pounds of thrust\"; a rounded news figure that does not match 33 x 250 tf = 18.2 Mlbf and was not reconciled)"
+  },
+  "vehicle.ship.tile.rated_temp": {
+   "v": 1400,
+   "unit": "C",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship_(spacecraft) (tiles withstand 1,400 C / 2,600 F)"
   }
  }
 }
