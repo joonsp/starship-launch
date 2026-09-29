@@ -126,11 +126,12 @@ export class VehicleMaterials {
   /** Launch-cloud environment knobs (see VEHICLE_ENV); call applyEnv() after editing. */
   readonly env = { ...VEHICLE_ENV };
   private readonly envUniform = new THREE.Uniform(new THREE.Vector3());
-  private oct = OCTAVES.high;
+  /** Octave count (uVhOct), shared by every vehicle program: a uniform so a quality switch does not recompile. */
+  private readonly octUniform = new THREE.Uniform(OCTAVES.high);
 
   constructor(private globals: Globals, quality: QualitySettings) {
     this.applyEnv();
-    this.oct = OCTAVES[quality.id];
+    this.octUniform.value = OCTAVES[quality.id];
     for (const role of Object.keys(RECIPES) as VehicleMaterialRole[]) this.byRole[role] = this.make(role);
   }
 
@@ -154,10 +155,7 @@ export class VehicleMaterials {
   }
 
   setQuality(q: QualitySettings): void {
-    const o = OCTAVES[q.id];
-    if (o === this.oct) return;
-    this.oct = o;
-    for (const m of Object.values(this.byRole)) m.needsUpdate = true;
+    this.octUniform.value = OCTAVES[q.id];
   }
 
   dispose(): void {
@@ -183,11 +181,12 @@ export class VehicleMaterials {
     const shaderSrc = commonGlsl + '\n' + r.glsl;
     m.onBeforeCompile = (shader) => {
       shader.uniforms.uVhEnv = self.envUniform;
+      shader.uniforms.uVhOct = self.octUniform;
       shader.uniforms.uVhSun = self.globals.uSunColor;
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', '#include <common>\nvarying vec3 vSlObjNrm;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vSlObjNrm = objectNormal;');
-      const header = `${specDefines()}\n#define VH_OCT ${self.oct}\n${r.extraDefines ?? ''}\nuniform vec3 uVhEnv;\nuniform vec3 uVhSun;\n`;
+      const header = `${specDefines()}\n#define VH_OCT_MAX 6\nuniform float uVhOct;\n${r.extraDefines ?? ''}\nuniform vec3 uVhEnv;\nuniform vec3 uVhSun;\n`;
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', `#include <common>\nvarying vec3 vSlObjNrm;\n${header}${shaderSrc}`)
         .replace('#include <lights_fragment_end>', `${LAUNCH_CLOUD_ENV}\n#include <lights_fragment_end>`)
@@ -206,7 +205,7 @@ export class VehicleMaterials {
     material.alphaT = mix(pow2(material.roughness), 1.0, pow2(material.anisotropy * (1.0 - vhTile)));
   #endif`);
     };
-    m.customProgramCacheKey = () => `vehicle:${role}:oct${self.oct}`;
+    m.customProgramCacheKey = () => `vehicle:${role}`;
     // thermal: `vhK` is declared by the call site above in main() scope, so the hook can read it.
     const cancel = 30.0 * (1.0 - r.plumeHeat);
     const kelvinExpr = cancel > 0

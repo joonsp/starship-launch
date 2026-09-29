@@ -140,7 +140,7 @@ export class EduModule implements Module {
     if (this.hud.isVisible()) docks.push(this.hud.el.getBoundingClientRect());
     this.placeSoundHotspot(vw, vh, docks);
     const rects = [...docks];
-    if (this.layers.forces) rects.push(...this.placeForceLabels(vw, vh));
+    if (this.layers.forces) rects.push(...this.placeForceLabels(vw, vh, docks));
     this.markers.update(ctx.camera, vw, vh, rects);
     if (this.hud.isVisible()) this.hud.update(ctx.camera.position, ctx.anchors.vehicleBase, IGNITION(), ctx.anchors.plumeImpact);
   }
@@ -268,7 +268,7 @@ export class EduModule implements Module {
   }
 
   /** Project the force labels; returns their screen rectangles (they are obstacles for the hotspot labels). */
-  private placeForceLabels(vw: number, vh: number): DOMRect[] {
+  private placeForceLabels(vw: number, vh: number, docks: DOMRect[]): DOMRect[] {
     const out: DOMRect[] = [];
     const labels = this.forces.getLabels();
     const cam = this.ctx.camera;
@@ -287,12 +287,35 @@ export class EduModule implements Module {
       if (!show) continue;
       const left = lb.id === 'thrust' || lb.id === 'plane';
       const w = el.offsetWidth || 90, hgt = el.offsetHeight || 34;
-      const ox = left ? -w - 12 : 12;
       const oy = lb.id === 'thrust' ? -4 : lb.id === 'weight' ? -hgt + 6 : lb.id === 'net' ? -hgt + 2 : -hgt / 2;
-      const px = x + ox, py = y + oy;
-      sig.push(`${px | 0},${py | 0}`);
-      el.style.transform = `translate(${px}px, ${py}px)`;
-      out.push(new DOMRect(px, py, w, hgt));
+      const py = y + oy;
+      // preferred side first, then the other side, then a clamp to the free region beside the docked panels
+      let px = x + (left ? -w - 12 : 12);
+      const hit = (cx: number): DOMRect | undefined => docks.find((d) => cx < d.right + 4 && cx + w > d.left - 4 && py < d.bottom + 4 && py + hgt > d.top - 4);
+      if (hit(px)) {
+        const flipped = x + (left ? 12 : -w - 12);
+        if (flipped >= 4 && flipped + w <= vw - 4 && !hit(flipped)) px = flipped;
+        else {
+          const d = hit(px)!;
+          px = x < (d.left + d.right) / 2 ? d.left - w - 6 : d.right + 6;   // the side the anchor is on
+        }
+      }
+      px = Math.max(4, Math.min(vw - w - 4, px));
+      let py2 = py;
+      const dv = docks.find((d) => px < d.right + 4 && px + w > d.left - 4 && py2 < d.bottom + 4 && py2 + hgt > d.top - 4);
+      if (dv) py2 = dv.top - hgt - 6;   // bottom-sheet layouts (narrow screens): sit just above the sheet
+      py2 = Math.max(4, Math.min(vh - hgt - 4, py2));
+      // labels squeezed beside a panel can stack on each other (long Finnish words): nudge along y to the nearer gap
+      for (let guard = 0; guard < 4; guard++) {
+        const o = out.find((r) => px < r.right + 3 && px + w > r.left - 3 && py2 < r.bottom + 3 && py2 + hgt > r.top - 3);
+        if (!o) break;
+        const up = o.top - hgt - 3, down = o.bottom + 3;
+        const nyUp = Math.max(4, up), nyDown = Math.min(vh - hgt - 4, down);
+        py2 = Math.abs(py2 - nyUp) <= Math.abs(nyDown - py2) && up >= 4 ? nyUp : nyDown;
+      }
+      sig.push(`${px | 0},${py2 | 0}`);
+      el.style.transform = `translate(${px}px, ${py2}px)`;
+      out.push(new DOMRect(px, py2, w, hgt));
     }
     void sig;
     return out;

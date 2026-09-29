@@ -954,6 +954,8 @@ export class CameraController implements Module {
       // Shift+[ arrives as '{' (US layout); accept the shifted glyphs as x5 / x10 steps.
       case '[': this.setLens({ fovDeg: l.fovDeg - 2 }); break;
       case ']': this.setLens({ fovDeg: l.fovDeg + 2 }); break;
+      case '-': this.setLens({ fovDeg: l.fovDeg - 2 }); break;          // layout-friendly pair (Finnish layouts need AltGr for [ ])
+      case '+': case '=': this.setLens({ fovDeg: l.fovDeg + 2 }); break;
       case '{': this.setLens({ fovDeg: l.fovDeg - 10 }); break;
       case '}': this.setLens({ fovDeg: l.fovDeg + 10 }); break;
       case ',': this.setLens({ rollDeg: l.rollDeg - 1 }); break;

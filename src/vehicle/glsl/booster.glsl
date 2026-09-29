@@ -52,16 +52,15 @@ void vhBooster(vec3 p, vec3 nObj,
   float band = vhSmoothBand(dseam, 0.32);                                  // frost thickens at ring welds
 
   // ---- clump layers (fade by footprint)
-  float hA, hB, hC;
+  float hA, hB = 0.0, hC = 0.0;
   float c1 = vhClumps(az, y, 1.10, 2.0, p, hA);
-  #if VH_OCT >= 4
-  float w2 = vhDetail(0.45);
-  float c2 = w2 > 0.01 ? mix(0.5, vhClumps(az, y + 3.7, 0.45, 2.0, p + 7.7, hB), w2) : 0.5;
-  float w3 = vhDetail(0.13);
-  float c3 = w3 > 0.01 ? mix(0.5, vhClumps(az, y + 9.1, 0.13, 1.6, p + 13.1, hC), w3) : 0.5;
-#else
-  float c2 = 0.5, c3 = 0.5;      // low quality: only the 1.1 m clumps
-#endif
+  float c2 = 0.5, c3 = 0.5;      // low quality (uVhOct < 4): only the 1.1 m clumps
+  if (uVhOct >= 4.0) {
+    float w2 = vhDetail(0.45);
+    c2 = w2 > 0.01 ? mix(0.5, vhClumps(az, y + 3.7, 0.45, 2.0, p + 7.7, hB), w2) : 0.5;
+    float w3 = vhDetail(0.13);
+    c3 = w3 > 0.01 ? mix(0.5, vhClumps(az, y + 9.1, 0.13, 1.6, p + 13.1, hC), w3) : 0.5;
+  }
   float crust = c1 * 0.5 + c2 * 0.32 + c3 * 0.18;                          // 0..1, 1 = crest
   float relief = 0.10 * (c1 - 0.4) * vhDetailB(1.1) + 0.045 * (c2 - 0.4) * vhDetailB(0.45) + 0.014 * (c3 - 0.4) * vhDetailB(0.13);   // metres: slope ~0.1-0.2 at every scale
 

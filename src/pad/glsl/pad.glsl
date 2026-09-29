@@ -36,7 +36,8 @@ float pdNoise(vec3 p) {
 // fbm on a pre-scaled coordinate q (= p / wl0). wl0 = shortest base wavelength in metres, used for the fade only.
 float pdFbm(vec3 q, float wl0) {
   float s = 0.0, a = 0.5, tot = 0.0, wl = wl0;
-  for (int i = 0; i < PD_OCT; i++) {
+  for (int i = 0; i < PD_OCT_MAX; i++) {
+    if (float(i) >= uPdOct) break;   // octave count per quality tier is a uniform (no recompile on a quality switch)
     float fade = 1.0 - smoothstep(0.4, 1.6, pdFw / wl);
     // an octave that dropped below the pixel footprint contributes its mean, so the average tone does not drift
     // (octaves already below the pixel footprint skip the noise fetch entirely: the branch is coherent per tile)
