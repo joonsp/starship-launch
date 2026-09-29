@@ -39,7 +39,7 @@ export const KEY_DEFS: Record<string, KeyDef> = {
   raptor_nozzle_expansion_ratio: d('', 1),
   mdot_booster_total_kgps: d('t/s', 1, 0.001), mdot_lox_total_kgps: d('t/s', 1, 0.001), mdot_ch4_total_kgps: d('t/s', 1, 0.001),
   booster_full_thrust_burn_time_s: d('s', 0), jet_mechanical_power_GW: d('GW', 0), chemical_power_GW: d('GW', 0),
-  vac_thrust_booster_MN: d('MN', 1), thrust_gain_150m_pct: d('%', 1), engine_start_lead_s: d('s', 0),
+  vac_thrust_booster_MN: d('MN', 1), thrust_gain_150m_pct: d('%', 2), engine_start_lead_s: d('s', 0),
   // tower and timing
   tower_height_used_m: d('m', 0), olm_height_m: d('m', 0), base_rise_to_tower_top_m: d('m', 0),
   t_base_at_tower_top_s: d('s', 2), v_base_at_tower_top_mps: d('m/s', 0), a_net_at_tower_top_mps2: d('m/s²', 2),

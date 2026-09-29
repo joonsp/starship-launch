@@ -5,15 +5,21 @@ import { val, raw_ } from '../specs.ts';
 import { fmt } from '../i18n.ts';
 import {
   P, defaultSim, G0, idealDeltaV, exhaustVelocity, soundFrontRadius, splFreeField, splAt, radiantFlux, vacuumThrust,
-  centreOfMassHeight, simulate, THROTTLE_BUCKET_START_S,
+  centreOfMassHeight, simulate, THROTTLE_BUCKET_START_S, vacuumGainPct, pressureMatchAltitude, massAtCutoffT,
 } from '../physics/liftoff.ts';
 
-/** Reserve propellant left in the booster at MECO for the landing (t, estimate, physics.md section 3). */
-export const BOOSTER_RESERVE_T = 50;
-
-/** Mass at MECO used by the Tsiolkovsky explainer (t): booster dry + reserve + whole ship + payload. */
+/**
+ * Mass at MECO used by the Tsiolkovsky explainer (t): the liftoff mass minus the propellant burned at the
+ * model's full-thrust flow until the cut-off time. (The old parts-sum version mixed a 5,400 t start mass with
+ * dry masses that add up to 5,700 t.)
+ */
 export function massAtMecoT(): number {
-  return P('booster_dry_mass_b3_t') + BOOSTER_RESERVE_T + P('ship_dry_mass_b3_t') + P('ship_prop_mass_b3_t') + P('payload_mass_f14_t');
+  return massAtCutoffT();
+}
+
+/** Booster propellant left at MECO (t), from the same full-flow burn: the reserve for boostback and landing. */
+export function boosterReserveT(): number {
+  return P('booster_prop_mass_b3_t') - (P('mdot_booster_total_kgps') / 1000) * P('meco_time_f14_s');
 }
 
 const obj = (k: string) => raw_(k) as Record<string, number>;
@@ -37,6 +43,7 @@ export function templateVars(): Record<string, string> {
   const m1 = massAtMecoT();
   const dvIdeal = idealDeltaV(exhaustVelocity(), P('liftoff_mass_used_t') * 1000, m1 * 1000);
   const chemW = P('chemical_power_GW') * 1e9;
+  const mLight = Math.min(P('liftoff_mass_published_t'), P('liftoff_mass_sum_of_parts_t')), mHeavy = Math.max(P('liftoff_mass_published_t'), P('liftoff_mass_sum_of_parts_t'));
   return {
     // vehicle
     h_booster: f(P('booster_height_m'), 1), h_stack: f(P('stack_height_m'), 1), h_ship: f(P('ship_height_m'), 1), dia: f(P('diameter_m')),
@@ -44,7 +51,7 @@ export function templateVars(): Record<string, string> {
     prop_b: f(P('booster_prop_mass_b3_t')), prop_s: f(P('ship_prop_mass_b3_t')), dry_b: f(P('booster_dry_mass_b3_t')),
     dry_s: f(P('ship_dry_mass_b3_t')), payload: f(P('payload_mass_f14_t')),
     m0: f(P('liftoff_mass_used_t')), m0_pub: f(P('liftoff_mass_published_t')), m0_sum: f(P('liftoff_mass_sum_of_parts_t')),
-    m_meco: f(m1), reserve: f(BOOSTER_RESERVE_T),
+    m_meco: f(m1), reserve: f(boosterReserveT()),
     // engines and thrust
     mdot: f(P('mdot_booster_total_kgps') / 1000, 1), mdot_lox: f(P('mdot_lox_total_kgps') / 1000, 1), mdot_ch4: f(P('mdot_ch4_total_kgps') / 1000, 1),
     burn_s: f(P('booster_full_thrust_burn_time_s')),
@@ -52,7 +59,7 @@ export function templateVars(): Record<string, string> {
     raptor_tf: f(P('raptor3_thrust_sl_tf')), raptor_tf_alt: f(P('raptor3_thrust_sl_alt_tf')),
     pc: f(P('raptor3_chamber_pressure_bar')), pc_alt: f(P('raptor3_chamber_pressure_alt_bar')),
     ve: f(P('raptor_exhaust_velocity_sl_mps')), ve_km: f(P('raptor_exhaust_velocity_sl_mps') / 1000, 1),
-    isp: f(P('raptor3_isp_sl_used_s')), isp_vac: f(P('raptor3_isp_vac_s')), gain150: f(P('thrust_gain_150m_pct'), 1),
+    isp: f(P('raptor3_isp_sl_used_s')), isp_vac: f(P('raptor3_isp_vac_s')), gain150: f(P('thrust_gain_150m_pct'), 2),
     of: f(P('raptor_of_ratio'), 1), t_chamber: f(P('raptor_chamber_temperature_K')), t_exit: f(P('raptor_exit_static_temperature_K')),
     exit_p: f(P('raptor_exit_pressure_bar'), 2), exit_mach: f(P('raptor_exit_mach'), 1), eps: f(P('raptor_nozzle_expansion_ratio'), 1),
     d_exit: f(P('raptor_nozzle_exit_diameter_m'), 1), engine_mass: f(P('raptor3_engine_mass_kg')),
@@ -66,8 +73,13 @@ export function templateVars(): Record<string, string> {
     t_maxq: f(P('max_q_time_f14_s')), t_meco: f(P('meco_time_f14_s')), t_stage: f(P('hot_staging_time_f14_s')),
     maxq_kpa: f(P('max_q_model_kPa')), meco_alt: f(P('meco_alt_est_km')), meco_speed: f(P('meco_speed_est_mps')),
     dv_ideal: f(dvIdeal / 1000, 2), dv_meco: f(P('meco_speed_est_mps') / 1000, 1), mass_ratio: f(P('liftoff_mass_used_t') / m1, 1),
+    // model extras
+    gain_tf: f((s.thrust / s0.thrust - 1) * 100, 2), gain_vac: f(vacuumGainPct(), 1), match_km: f(pressureMatchAltitude() / 1000, 1),
+    tf_light: f(simulate({ m0: mLight * 1000 }).solveFreezeTime(), 1), tf_heavy: f(simulate({ m0: mHeavy * 1000 }).solveFreezeTime(), 1),
+    thrust_report_Mlbf: f(P('liftoff_thrust_f14_report_Mlbf')), prop_total: f(P('booster_prop_mass_b3_t') + P('ship_prop_mass_b3_t')),
+    tile_c: f(val('vehicle.ship.tile.rated_temp')),
     // steam and water
-    water_gal: f(P('deluge_water_pad1_gal')), water_t: f(P('deluge_water_pad1_kg') / 1000), water_ml: f(P('deluge_water_pad1_kg') / 1e6, 1),
+    water_gal: f(P('deluge_water_pad1_gal')), water_t: f(P('deluge_water_pad1_kg') / 1000), steam_t: f(P('deluge_water_pad1_kg') * P('deluge_vaporised_fraction') / 1000), water_ml: f(P('deluge_water_pad1_kg') / 1e6, 1),
     vap_pct: f(P('deluge_vaporised_fraction') * 100), h2o_tps: f(P('combustion_h2o_tps')), co2_tps: f(P('combustion_co2_tps'), 1),
     vap_tj: f(P('deluge_vaporisation_energy_J') / 1e12, 1), vap_s: f(P('deluge_vaporisation_energy_J') / chemW),
     chem_gw: f(P('chemical_power_GW')), jet_gw: f(P('jet_mechanical_power_GW')),
