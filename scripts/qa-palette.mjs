@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Renders on the host GPU (ANGLE/Vulkan) by default. SW=1 forces SwiftShader software rendering (slow, CPU-heavy).
 // Quantitative look check: render the real app in the calibrated photo view at the reference
 // resolution (1677x943), wait for convergence, then compare the display-referred colour at every
 // research/palette.json swatch (13x13 mean) against research/reference.jpeg.
@@ -22,7 +23,7 @@ fs.mkdirSync(outDir, { recursive: true });
 
 const q = `mode=photo&ui=0&probe=0${extra ? '&' + extra : ''}`;
 const full = url + (url.includes('?') ? '&' : '?') + q;
-const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const browser = await chromium.launch({ args: process.env.SW === '1' ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : ['--use-angle=vulkan', '--enable-features=Vulkan', '--ignore-gpu-blocklist', '--enable-gpu'] });
 const page = await browser.newPage({ viewport: { width: 1677, height: 943 } });
 const logs = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') logs.push(`[${m.type()}] ${m.text()}`); });

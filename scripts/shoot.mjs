@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Renders on the host GPU (ANGLE/Vulkan) by default. SW=1 forces SwiftShader software rendering (slow, CPU-heavy).
 // Headless QA screenshots of a WebGL page with scripted steps (works without a GPU / browser extension).
 //
 // Usage:  node shoot.mjs <steps.json> <outDir> [url=http://127.0.0.1:5173/] [readySelectorJs]
@@ -35,7 +36,7 @@ if (!stepsFile || !outDir) { console.error('usage: node shoot.mjs steps.json out
 const steps = JSON.parse(fs.readFileSync(stepsFile, 'utf8'));
 fs.mkdirSync(outDir, { recursive: true });
 const { chromium } = loadPlaywright();
-const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const browser = await chromium.launch({ args: process.env.SW === '1' ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : ['--use-angle=vulkan', '--enable-features=Vulkan', '--ignore-gpu-blocklist', '--enable-gpu'] });
 const [vw, vh] = (process.env.VIEWPORT || '1600x950').split('x').map(Number);
 const page = await browser.newPage({ viewport: { width: vw, height: vh } });
 const logs = [];
