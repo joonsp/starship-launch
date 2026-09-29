@@ -51,12 +51,11 @@ These are useful for deep links and scripted screenshots.
 
 Example: `?preset=night&mode=walk&quality=low&edu=1&lang=fi&ui=0`.
 
-`window.app` exposes `{ ctx, controller, modules, pipeline, ui, setPreset, setQuality, setMode, setEdu, setLang,
-setDrift, exportStill, invalidate, stats, ready, frames, drawn }` for automation. `frames` counts animation ticks
-and `drawn` counts frames actually drawn (the idle gate skips the rest); `stats` holds the draw calls and triangles of
-the last drawn frame and `stats.idle`. A script that changes the image without an event (poking a module's uniforms)
-must call `app.invalidate()`, or start the page with `?idle=0`. `scripts/qa-shoot.mjs` takes headless screenshots with
-scripted steps:
+`window.app` exposes `{ ctx, controller, modules, pipeline, ui, gpu, setPreset, setQuality, setMode, setEdu, setLang,
+setDrift, exportStill, invalidate, stats, ready, frames, drawn }` for automation. `frames` counts animation ticks and
+`drawn` counts frames actually drawn (the idle gate skips the rest); `stats` holds the draw calls, triangles and
+programs of the last drawn frame plus `stats.idle`; `gpu` is the GPU-name quality guess. `invalidate()` wakes the idle
+gate. `scripts/qa-shoot.mjs` takes headless screenshots with scripted steps:
 
 ```sh
 VIEWPORT=1280x720 node scripts/qa-shoot.mjs steps.json out/shots \
@@ -71,9 +70,10 @@ VIEWPORT=1280x720 node scripts/qa-shoot.mjs steps.json out/shots \
 | `L` / `Shift+L` | Next / previous lighting preset |
 | `R` | Back to the photo camera and reset the lens |
 | `[` `]` (`{` `}`) | Field of view −/+ 2° (±10°) |
+| `-` `+` (`=`) | The same field-of-view step, for layouts where `[` `]` need AltGr (Finnish, Swedish, German) |
 | `,` `.` (`<` `>`) | Roll (Dutch angle) −/+ 1° (±5°) |
 | `E` | Education layer (not in fly mode, where E means *up*) |
-| `H` | Hide or show all interface chrome |
+| `H` | Hide or show all interface chrome (the touch joystick included) |
 | `?` | Keyboard help |
 | `Esc` | Close panels and menus; release the mouse |
 | `Ctrl` | Walk mode: toggle the 40 m/s hyper walk |
@@ -101,8 +101,10 @@ On touch devices there is a virtual joystick at the lower left, and you drag to 
   - *Photo*: the sunrise of the reference photo, with the sun 5.7° high at azimuth 95°.
   - *Noon*: sun 65° high.
   - *Night launch*: the plume lights everything.
-  - *Thermal camera*: false-colour temperature, from about 80 K on the cryogenic tanks to about 3500 K in the Mach diamonds.
-  - *Clay*: albedo-neutral form study.
+  - *Thermal camera*: false-colour temperature, from about 80 K on the cryogenic tanks to about 3500 K in the Mach
+    diamonds, with a kelvin scale bar burned into the image (it is also in exported stills).
+  - *Clay*: albedo-neutral form study, lit by a white sun raised to 28° in the south-east (the camera side) so the
+    forms are modelled by light and shade and the long shadows draw them on the ground.
 - **Slow drift:** a gentle animation around the frozen instant. The steam billows and drifts, the plume flickers,
   the engines rumble and the aviation beacons flash. Switching it off returns to the exact frozen still.
 - **Quality:**
@@ -111,7 +113,8 @@ On touch devices there is a virtual joystick at the lower left, and you drag to 
     back-to-back drawn frames while the clouds are still marching (converged frames are nearly free and would hide a
     slow GPU), and it runs again when the canvas becomes much larger (fullscreen, a 4K monitor).
   - *Low* to *Ultra* scale the pixel ratio, cloud march resolution and steps, bake resolutions, shadow map size
-    and post effects.
+    and post effects. The surface-detail octave count of the vehicle and pad materials is a uniform, so a switch
+    relinks only a couple of programs instead of about seventy.
 - **Education:** hotspots with cards (live key numbers, each marked *sourced* or *estimate*), force arrows, and
   the sound-front sphere. There is also a walk HUD and a "Physics of this moment" panel with four tabs: Moment,
   Explainers, Sources and model notes. It is available in English and Finnish.
@@ -183,31 +186,50 @@ scripts/                headless screenshot tools (shoot.mjs, qa-shoot.mjs)
 tests/                  cross-module unit tests (module tests live next to their code)
 ```
 
-## Accuracy notes
+## Accuracy
 
 - **Sourced values and estimates are kept apart.**
   - Every dimension and physical constant lives in `specs/starship.json` with its source (`src`) or the
     reason it is an estimate (`est`).
-  - The education layer shows each number with a *sourced* or *estimate* badge.
-  - The **Sources** tab lists every spec value with its status.
-- **Key decisions** are summarised in `research/notes.md`, and the full research is in the other `research/*.md`
-  files. The main ones:
-  - Flight identification: Flight 14, about 85 % confidence.
-  - Raptor 3 thrust: 250 tf.
-  - Sun: 5.7° elevation at azimuth 95.2°, computed for the pad at the launch time.
-  - Tower height: 144.5 m.
-  - Booster base height in the photo: 158 m.
-  - Freeze time: 7.2 s. The physics integrator gets 7.197 s, and a test checks the two against each other.
-- **Estimates.**
-  - The launch mount, flame trench, diverter and tank farm details are estimates built from OSM footprints and the
-    photo.
-  - The ship's nose profile and the grid-fin clocking follow the photo rather than the published drawings (see
-    `blender/build_vehicle.py`).
-  - The flight model is a 1-D vertical ascent. It is firm for the first ~10 s; the throttle bucket after T+35 s is
-    a placeholder.
-  - The clouds are art-directed volumes fitted to the photo's silhouettes (IoU about 0.9), not a fluid
-    simulation.
+  - The education layer shows each number with a *sourced* or *estimate* badge, and the **Sources** tab lists every
+    spec value with its status.
+- **Sourced** (published or computed from a published source):
+  - vehicle dimensions: stack 124 m, booster 72.3 m, ship 52.1 m; Block 3 engine counts;
+  - tower height 144.5 m (OSM and the FAA filing) and the site geography (OpenStreetMap);
+  - the sun: 5.7° at azimuth 95.2°, computed from an almanac for the pad at the launch time;
+  - Raptor 3 thrust of 250 tf (33 × 250 tf = 80.8 MN, the published booster thrust), Isp 330 s;
+  - deluge water 358,000 gal and 92 % vaporised (FAA re-evaluation, from search excerpts);
+  - max-Q about T+58 s, MECO about T+140 s and hot staging about T+142 s (launch schedule sites, Spaceflight Now, NSF).
+- **Estimated or judged** (each is marked in the app):
+  - **Which flight it is.** Most likely Flight 14, about 85 %, inferred from the lighting and timing. The photo's
+    caption and original post were not found, so the flight-specific text (payload, the booster's ending) holds only
+    if that is right.
+  - liftoff mass 5,400 t (published figures range from 5,300 to 5,700 t), the dry masses, the mount height of 20 m
+    (it sets the freeze time of 7.2 s), the 1-D vertical flight model (firm for the first ~10 s only);
+  - nozzle exit size, expansion ratio and exit pressure (Raptor 1 values reused), tile size and gap, hot-stage vent
+    count;
+  - the launch mount, flame trench, diverter and tank-farm details (OSM footprints plus the photo);
+  - the ship's nose profile and grid-fin clocking, which follow the photo rather than the drawings;
+  - the launch clouds: art-directed volumes fitted to the photo's silhouettes (IoU about 0.9), not a fluid simulation.
+- **Key decisions and open items** are in `research/notes.md`; the full research is in the other `research/*.md` files.
+  The physics numbers that depend on each other are pinned by tests (`tests/physics.test.ts`).
 - **Reference photo.** It is used only to calibrate the camera and the look, and it is not part of the build.
+
+## Known limitations
+
+- **Frozen instant.** The scene is one moment. Slow drift animates the steam, the plume flicker and the beacons
+  around it, but nothing moves on: no ascent, no ground shake, no sound.
+- **Approximate look.** The clouds are art-directed, not simulated. Distant terrain, buildings and roads come from
+  OpenStreetMap footprints and are not photogrammetry. The palette is fitted to the reference photo at the photo
+  camera; the other presets and views are physically motivated, not calibrated against anything.
+- **Identification.** The flight is inferred (about 85 %), not read from a caption.
+- **Performance.** The 60 fps target is for *High* at 1080p on an AMD Radeon 8060S iGPU. Software rendering
+  (SwiftShader) works for QA but takes minutes per converged frame. *Ultra* and 4K need a discrete GPU.
+- **Input.** Walk and fly have no collision with the vehicle or the plume in fly mode; walk collision covers the pad
+  structures, tanks and fences only. Touch has a joystick and drag-to-look, but the education panel is a bottom
+  sheet that covers much of a phone screen.
+- **Browsers.** WebGL 2 with half-float render targets is required.
+- **Languages.** English and Finnish only; the education content is written for those two.
 
 ## Credits
 

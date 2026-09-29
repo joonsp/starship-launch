@@ -39,10 +39,11 @@ float vhNoise(vec3 p) {
 }
 
 // fbm of `pn` (noise units). `wl` = wavelength in metres of the first octave along the finest axis; octaves
-// that the pixel footprint cannot resolve fade to the mean (0.5). VH_OCT (define) caps the octave count.
+// that the pixel footprint cannot resolve fade to the mean (0.5). uVhOct (uniform, per quality tier; the loop runs to VH_OCT_MAX and breaks early) caps the octave count.
 float vhFbm(vec3 pn, float wl) {
   float sum = 0.0, norm = 0.0, amp = 0.5;
-  for (int o = 0; o < VH_OCT; o++) {
+  for (int o = 0; o < VH_OCT_MAX; o++) {
+    if (float(o) >= uVhOct) break;
     float w = vhDetail(wl);
     sum += amp * mix(0.5, vhNoise(pn), w);
     norm += amp;

@@ -46,6 +46,8 @@
   transition: opacity 0.3s ease, visibility 0s 0.3s;
 }
 .ui-shell.is-hidden .ui-chrome *, .ui-shell.is-locked .ui-chrome * { pointer-events: none !important; }
+/* H hides the walk / fly touch joystick too (it is a sibling of the shell in #ui, built by src/controls/touch.ts). */
+:has(> .ui-shell.is-hidden) > [data-controls='joystick'] { display: none !important; }
 
 /* Touch-only way back from "hide all" (there is no H key): a faint corner button, only while hidden. */
 .ui-shell .ui-unhide { display: none; position: absolute; top: calc(10px + var(--ui-safe-top)); right: calc(10px + var(--ui-safe-right, 0px)); width: 40px; height: 40px; padding: 0; place-items: center; border-radius: 50%; opacity: 0.35; pointer-events: auto; }

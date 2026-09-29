@@ -349,7 +349,7 @@ export class UiShell {
     const K = (...k: string[]) => h('span', { class: 'ui-keys' }, ...k.map((x) => (x === '/' ? h('span', { class: 'ui-keys-sep' }, '/') : h('kbd', { class: 'ui-kbd' }, x))));
     const groups: Array<{ title: string; rows: Array<[HTMLElement, string]> }> = [
       { title: 'ui.help.g.view', rows: [[K('1', '2', '3', '4'), 'ui.help.k.modes'], [K('L'), 'ui.help.k.preset'], [K('R'), 'ui.help.k.reset']] },
-      { title: 'ui.help.g.lens', rows: [[K('[', ']'), 'ui.help.k.fov'], [K(',', '.'), 'ui.help.k.roll']] },
+      { title: 'ui.help.g.lens', rows: [[K('[', ']', '/', '-', '+'), 'ui.help.k.fov'], [K(',', '.'), 'ui.help.k.roll']] },
       { title: 'ui.help.g.move', rows: [[K('W', 'A', 'S', 'D'), 'ui.help.k.move'], [K('Shift'), 'ui.help.k.run'], [K('C'), 'ui.help.k.crouch'], [K('Space'), 'ui.help.k.jump'], [K('Ctrl'), 'ui.help.k.hyper'], [K('Q', '/', 'E'), 'ui.help.k.qe']] },
       { title: 'ui.help.g.ui', rows: [[K('E'), 'ui.help.k.edu'], [K('H'), 'ui.help.k.hide'], [K('?'), 'ui.help.k.help'], [K('Esc'), 'ui.help.k.esc']] },
     ];
@@ -432,6 +432,9 @@ export class UiShell {
       case 'r': this.resetView(); break;
       case '[': this.nudgeLens('fovDeg', -(e.shiftKey ? 10 : 2)); break;
       case ']': this.nudgeLens('fovDeg', e.shiftKey ? 10 : 2); break;
+      // layout-friendly pair (Finnish layouts need AltGr for [ ]): - narrower, + or = wider
+      case '-': this.nudgeLens('fovDeg', -2); break;
+      case '+': case '=': this.nudgeLens('fovDeg', 2); break;
       case ',': this.nudgeLens('rollDeg', -1); break;
       case '.': this.nudgeLens('rollDeg', 1); break;
       default: return;

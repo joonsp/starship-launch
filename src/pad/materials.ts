@@ -34,7 +34,8 @@ export type PadRole =
   | 'apron' | 'stainless' | 'olm_steel' | 'olm_column' | 'diverter' | 'tank_lox' | 'tank_ln2' | 'tank_ch4'
   | 'tank_water' | 'tank_gas' | 'tank_band' | 'pipe_insul' | 'fence_mesh' | 'annex';
 
-/** fbm octaves per quality tier (the dominant per-pixel cost). */
+/** fbm octaves per quality tier (the dominant per-pixel cost). A uniform, not a define: switching quality must not
+ *  recompile the ~20 pad programs. The GLSL loop runs to PD_OCT_MAX and breaks early. */
 const OCTAVES: Record<QualityId, number> = { low: 3, medium: 4, high: 5, ultra: 6 };
 
 interface Recipe {
@@ -76,10 +77,11 @@ const RECIPES: Record<Exclude<PadRole, 'beacon'>, Recipe> = {
 
 export class PadMaterials {
   private cache = new Map<string, THREE.MeshStandardMaterial>();
-  private oct = 5;
+  /** Shared by every pad program (uPdOct); changing .value retunes all of them without a relink. */
+  private readonly octUniform = new THREE.Uniform(5);
 
   constructor(private globals: Globals, quality: QualitySettings) {
-    this.oct = OCTAVES[quality.id];
+    this.octUniform.value = OCTAVES[quality.id];
   }
 
   /** Material for a GLB material name (see the role table above). Unknown names get a plain grey standard material. */
@@ -99,10 +101,7 @@ export class PadMaterials {
   }
 
   setQuality(q: QualitySettings): void {
-    const o = OCTAVES[q.id];
-    if (o === this.oct) return;
-    this.oct = o;
-    for (const m of this.cache.values()) m.needsUpdate = true;   // recompile with the new PD_OCT define
+    this.octUniform.value = OCTAVES[q.id];   // uniform: no recompile
   }
 
   dispose(): void {
@@ -120,9 +119,10 @@ export class PadMaterials {
     if (!r) return applyGlobals(m, this.globals, { kelvin: 290 });
     const self = this;
     m.onBeforeCompile = (shader) => {
+      shader.uniforms.uPdOct = self.octUniform;
       shader.fragmentShader = shader.fragmentShader
         // prelude goes AFTER the hook's own declarations (it appends to <common> first, then we append here)
-        .replace('#include <common>', `#include <common>\n#define PD_OCT ${self.oct}\n#define PD_BUMP ${r.bump.toFixed(2)}\n${padGlsl}`)
+        .replace('#include <common>', `#include <common>\n#define PD_OCT_MAX 6\nuniform float uPdOct;\n#define PD_BUMP ${r.bump.toFixed(2)}\n${padGlsl}`)
         .replace('#include <color_fragment>', `#include <color_fragment>
   PdSurf pdS; pdS.alb = diffuseColor.rgb; pdS.rough = 0.7; pdS.metal = 0.0; pdS.H = 0.0; pdS.frost = 0.0;
   if (uViewMode != VIEW_CLAY) {
@@ -138,11 +138,11 @@ export class PadMaterials {
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
   if (uViewMode != VIEW_CLAY) normal = pdBump(-vViewPosition, normal, pdS.H, PD_BUMP);`);
     };
-    m.customProgramCacheKey = () => `pad|${role}|${this.oct}`;
+    m.customProgramCacheKey = () => `pad|${role}`;
     return applyGlobals(m, this.globals, {
       kelvinExpr: r.kelvin,
       plumeHeat: (r.plumeHeat ?? 1) > 0,
-      cacheKey: `${role}|${this.oct}`,
+      cacheKey: role,
     });
   }
 }
