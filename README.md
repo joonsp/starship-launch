@@ -182,7 +182,7 @@ public/data/            OSM site data, pad colliders
 blender/                headless Blender build scripts for the vehicle and the pad, plus preview renders
 research/               research notes, specs, palette, camera calibration, reference photo (not shipped)
 sandbox/                per-module development pages (npx vite, then /sandbox/<module>.html)
-scripts/                headless screenshot tools (shoot.mjs, qa-shoot.mjs)
+scripts/                headless QA on the host GPU: shoot.mjs, qa-shoot.mjs, qa-palette.mjs (colour vs the reference), qa-gpu-bench.mjs
 tests/                  cross-module unit tests (module tests live next to their code)
 ```
 
@@ -213,7 +213,9 @@ tests/                  cross-module unit tests (module tests live next to their
   - the launch clouds: art-directed volumes fitted to the photo's silhouettes (IoU about 0.9), not a fluid simulation.
 - **Key decisions and open items** are in `research/notes.md`; the full research is in the other `research/*.md` files.
   The physics numbers that depend on each other are pinned by tests (`tests/physics.test.ts`).
-- **Reference photo.** It is used only to calibrate the camera and the look, and it is not part of the build.
+- **Reference photo.** It is used only to calibrate the camera and the look, and it is not part of the build or of
+  this repository. It is a third-party photo (posted on X on 2026-09-28) and is copyrighted. To run the palette QA
+  (`scripts/qa-palette.mjs`), place a 1677×943 reference at `research/reference.jpeg`; the path is git-ignored.
 
 ## Known limitations
 
@@ -223,8 +225,10 @@ tests/                  cross-module unit tests (module tests live next to their
   OpenStreetMap footprints and are not photogrammetry. The palette is fitted to the reference photo at the photo
   camera; the other presets and views are physically motivated, not calibrated against anything.
 - **Identification.** The flight is inferred (about 85 %), not read from a caption.
-- **Performance.** The 60 fps target is for *High* at 1080p on an AMD Radeon 8060S iGPU. Software rendering
-  (SwiftShader) works for QA but takes minutes per converged frame. *Ultra* and 4K need a discrete GPU.
+- **Performance.** Measured on an AMD Radeon 8060S iGPU at 2560×1440 (`scripts/qa-gpu-bench.mjs`): *High* runs at
+  93 fps and *Ultra* at 52 fps with the camera moving every frame. Both reach about 210 fps once converged, and
+  then the idle gate stops drawing. Auto-detect picks *High* on that GPU. The QA scripts render on the host GPU by
+  default; `SW=1` forces SwiftShader, which is CPU-heavy and takes minutes per converged frame.
 - **Input.** Walk and fly have no collision with the vehicle or the plume in fly mode; walk collision covers the pad
   structures, tanks and fences only. Touch has a joystick and drag-to-look, but the education panel is a bottom
   sheet that covers much of a phone screen.
@@ -237,4 +241,12 @@ tests/                  cross-module unit tests (module tests live next to their
   <https://www.openstreetmap.org/copyright>. The coastline, tidal flats, roads, buildings, tank farm and tower
   footprints come from it.
 - three.js (MIT), pmndrs postprocessing (Zlib), lil-gui (MIT).
-- This is an independent educational project. It is not affiliated with or endorsed by SpaceX.
+- This is an independent educational project. It is not affiliated with or endorsed by SpaceX. "SpaceX", "Starship",
+  "Super Heavy" and "Raptor" are used only to describe the subject.
+
+## License
+
+- Code, shaders, Blender scripts, models and documentation: MIT (see `LICENSE`).
+- OpenStreetMap-derived data (`public/data/site.json`, `research/osm-raw.json`): ODbL 1.0 (see
+  `public/data/LICENSE-ODbL.md`).
+- The reference photo is not included and not licensed by this project.

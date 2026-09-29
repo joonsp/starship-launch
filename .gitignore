@@ -4,3 +4,9 @@ out
 .vite
 out/
 .claude/
+
+# Third-party reference photo: copyrighted, never commit (see README "Reference photo")
+research/reference.jpeg
+# Python bytecode from Blender builds
+__pycache__/
+*.pyc
