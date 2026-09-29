@@ -130,8 +130,8 @@ export class VolumeBaker {
       uBoxMin: boxMin, uBoxSize: boxSize, uSunDir: { value: new THREE.Vector3(0, 1, 0) },
       uSigma: { value: 0.1 }, uBakeScale: { value: 0.72 },
       uPlumeA: { value: new THREE.Vector3() }, uPlumeB: { value: new THREE.Vector3() },
-      uFire: { value: Array.from({ length: 12 }, () => new THREE.Vector4()) },
-      uFireW: { value: new Array(12).fill(0) }, uFireN: { value: 0 },
+      uFire: { value: Array.from({ length: 16 }, () => new THREE.Vector4()) },
+      uFireW: { value: new Array(16).fill(0) }, uFireN: { value: 0 },
       uPlumeN: { value: 10 }, uSegSteps: { value: 12 }, uFireTauScale: { value: 0.3 },
     });
   }
@@ -248,7 +248,7 @@ export class VolumeBaker {
     u.uPlumeB.value.copy(inp.plumeB);
     u.uPlumeN.value = inp.plumeSamples;
     u.uSegSteps.value = inp.segSteps;
-    const fires = inp.fires.slice(0, 12);
+    const fires = inp.fires.slice(0, 16);
     fires.forEach((f, i) => { (u.uFire.value as THREE.Vector4[])[i].set(f.c[0], f.c[1], f.c[2], f.r); (u.uFireW.value as number[])[i] = f.w; });
     u.uFireN.value = fires.length;
     for (let z = 0; z < D; z++) {

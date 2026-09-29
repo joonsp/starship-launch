@@ -128,15 +128,6 @@ export const L0_SPECS: L0Spec[] = [
   { u: 860, d: 565, h: -6, r: 24, g: 'G', k: 0.45 },
   { u: 1030, d: 560, h: 2, r: 26, g: 'G', k: 0.6 },
   { u: 900, d: 700, h: 10, r: 30, g: 'G', k: 0.5 },
-  // ---- FIREBALL / hot gas at the deflector, spilling east out of the trench exit (emissive).
-  //      Photo: yellow-white core at x 830-870, y 640-670; orange sheath to x ~1000 along the ground.
-//      Hot exhaust is glowing gas, not opaque steam: lower density (k) so the emission shows.
-  { u: 830, d: 690, h: 24, r: 22, g: 'F', t: 1.0, k: 0.4 },
-  { u: 862, d: 680, h: 22, r: 24, g: 'F', t: 0.95, k: 0.4 },
-  { u: 900, d: 690, h: 18, r: 22, g: 'F', t: 0.85, k: 0.45 },
-  { u: 800, d: 690, h: 16, r: 18, g: 'F', t: 0.75, k: 0.45 },
-  { u: 945, d: 690, h: 12, r: 20, g: 'F', t: 0.6, k: 0.55 },
-  { u: 985, d: 680, h: 10, r: 18, g: 'F', t: 0.4, k: 0.65 },
   // ---- EAST (right) bank: x 1000..1677 px; spreads south-east toward the camera
   { u: 1005, d: 640, h: 45, r: 44, g: 'E', t: 0.25 },    // near-pad roll, orange
   { u: 1065, d: 610, h: 62, r: 46, g: 'E', t: 0.15 },
@@ -164,6 +155,79 @@ export const L0_SPECS: L0Spec[] = [
   { u: 1640, d: 640, h: 120, r: 50, g: 'E' },
 ];
 
+// ── Fireball and trench outflow, authored in PAD-LOCAL metres along the flame trench ─────────
+// The trench axis is pad-local +x (bearing 123 deg, ESE-WNW; scene-config PAD_YAW / TRENCH_CUTOUT,
+// ends at about +-35 m). The plume impinges on the deflector under the mount; the hot exhaust leaves
+// BOTH trench ends and runs out along the axis over the ground. From the photo camera (which looks
+// almost perpendicular to the axis) the ESE end projects to u ~ 880 px and the WNW end to u ~ 765 px,
+// so the visible yellow-white core (u 830-870, v 640-670) is the deflector fireball plus the ESE exit.
+// Columns: lx (m along the axis, + = ESE), lz (m across, + = SSW), h (centre height m), r (m),
+//          t (temperature 0..1), k (density; hot exhaust is glowing gas, not opaque steam).
+export interface FireSpec { lx: number; lz: number; h: number; r: number; t: number; k: number }
+
+export const FIRE_SPECS: FireSpec[] = [
+  { lx: 8, lz: 0, h: 26, r: 20, t: 1.0, k: 0.4 },      // deflector fireball round the plume foot
+  { lx: 26, lz: 2, h: 20, r: 22, t: 0.95, k: 0.4 },    // spilling toward the ESE trench exit
+  { lx: 42, lz: 0, h: 14, r: 20, t: 0.85, k: 0.45 },   // ESE exit (the photo's bright core, right of the column)
+  { lx: -10, lz: 0, h: 18, r: 18, t: 0.8, k: 0.45 },   // behind the tower base
+  { lx: -38, lz: 0, h: 12, r: 18, t: 0.7, k: 0.5 },    // WNW exit (hidden by the ground roll from the photo camera)
+  { lx: 64, lz: 2, h: 12, r: 20, t: 0.6, k: 0.55 },    // ESE outflow over the apron
+  { lx: 92, lz: 6, h: 10, r: 18, t: 0.4, k: 0.65 },
+  { lx: -64, lz: -2, h: 10, r: 18, t: 0.45, k: 0.6 },  // WNW outflow
+];
+
+/**
+ * Rising, fire-lit steam round the plume foot (behind the tower, photo u ~800 v ~600): orange glow,
+ * not flame. Normal L0 masses with a warm (sub-emissive) temperature, in pad-local metres.
+ */
+export const FOOT_SPECS: FireSpec[] = [
+  { lx: -12, lz: -6, h: 48, r: 18, t: 0.12, k: 0.35 },
+  { lx: 20, lz: -8, h: 44, r: 18, t: 0.12, k: 0.3 },
+];
+
+/**
+ * Ground jets: the deluge steam and exhaust that leave both trench ends as low, dense wall jets along
+ * the trench axis and feed the two banks. From the photo camera they sit behind the fitted front
+ * masses of the banks (so the silhouettes do not change); from above and from the side they show the
+ * exhaust running out along the trench, and they shade the pad from the low sun and carry the fire
+ * glow along the ground into the base of each bank. Pad-local metres; t = warm near the trench.
+ */
+export const JET_SPECS: FireSpec[] = [
+  { lx: 58, lz: 4, h: 18, r: 24, t: 0.18, k: 0.8 },
+  { lx: 96, lz: -8, h: 22, r: 30, t: 0.1, k: 0.9 },
+  { lx: 145, lz: 14, h: 26, r: 34, t: 0.04, k: 1 },
+  { lx: 205, lz: 22, h: 28, r: 36, t: 0, k: 1 },
+  { lx: 270, lz: 30, h: 30, r: 36, t: 0, k: 1 },
+  { lx: -58, lz: 2, h: 18, r: 24, t: 0.18, k: 0.8 },
+  { lx: -98, lz: 6, h: 22, r: 30, t: 0.1, k: 0.9 },
+  { lx: -150, lz: 12, h: 26, r: 34, t: 0.04, k: 1 },
+  { lx: -212, lz: 18, h: 28, r: 36, t: 0, k: 1 },
+  { lx: -280, lz: 24, h: 30, r: 36, t: 0, k: 1 },
+];
+
+/**
+ * Glowing outflow: the afterburning exhaust leaves both trench ends and runs along the ground under
+ * the steam banks, lighting their bases orange from below (the photo's orange lower halves).
+ * Light sources only (no density), pad-local metres along the trench axis, plus a relative power w.
+ */
+export const GLOW_SPECS: { lx: number; lz: number; h: number; r: number; w: number }[] = [
+  { lx: -70, lz: 0, h: 6, r: 22, w: 0.45 },    // WNW outflow
+  { lx: -125, lz: -4, h: 8, r: 26, w: 0.3 },
+  { lx: -190, lz: -8, h: 8, r: 28, w: 0.12 },
+  { lx: 72, lz: -6, h: 6, r: 22, w: 0.2 },     // ESE outflow (the near part is mostly seen through the fireball)
+  { lx: 128, lz: 4, h: 8, r: 26, w: 0.42 },
+  { lx: 195, lz: 12, h: 8, r: 28, w: 0.28 },
+];
+
+/** Default pad yaw (three.js rotation.y, rad) = scene-config PAD_YAW (spec scene.trench_yaw, -33.1 deg). */
+export const DEFAULT_PAD_YAW = (-33.1 * Math.PI) / 180;
+
+/** Pad-local (lx along the trench, lz across) -> world, i.e. rotation.y(yaw) applied to (lx, h, lz). */
+export function padToWorld(lx: number, lz: number, h: number, yaw = DEFAULT_PAD_YAW): Vec3 {
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  return [c * lx + s * lz, h, -s * lx + c * lz];
+}
+
 /** Group centroids (world xz) used as "outward" references for child billows. */
 const GROUP_ORIGIN: Record<string, Vec3> = {
   W: [-60, 0, 0],     // west trench exit side
@@ -178,28 +242,49 @@ export interface BuildOptions {
   detail?: number;
   /** Only return levels <= maxLevel. */
   maxLevel?: number;
+  /** Pad yaw (three.js rotation.y, rad) for the pad-local fire / outflow specs (scene-config PAD_YAW). */
+  padYaw?: number;
 }
+
+/** One level-0 mass in world space (from a photo-space L0Spec or a pad-local FireSpec). */
+interface Mass { c: Vec3; r: number; g: L0Spec['g']; t: number; k: number }
 
 /**
  * Build the full puff list in world space. Deterministic for a given seed.
  * Typical count: ~50 L0, ~500 L1, ~3000 L2.
+ * Order: the photo-fitted banks and ground roll (L0_SPECS), then the fireball (FIRE_SPECS), the
+ * fire-lit steam round the plume foot (FOOT_SPECS) and the ground jets along the trench (JET_SPECS). The fire masses use their own random stream, so
+ * editing them never reshuffles the billows of the photo-fitted banks.
  */
 export function buildPuffs(fr: PhotoFrame, opts: BuildOptions = {}): Puff[] {
-  const rand = rng(opts.seed ?? 1337);
+  const seed = opts.seed ?? 1337;
   const detail = opts.detail ?? 1;
   const maxLevel = opts.maxLevel ?? 2;
+  const yaw = opts.padYaw ?? DEFAULT_PAD_YAW;
   const out: Puff[] = [];
-  const R = (a: number, b: number) => a + (b - a) * rand();
 
+  const banks: Mass[] = L0_SPECS.map((s) => ({ c: worldFromPhoto(fr, s.u, s.d, s.h), r: s.r, g: s.g, t: s.t ?? 0, k: s.k ?? 1 }));
+  const fire: Mass[] = [
+    ...FIRE_SPECS.map((s) => ({ c: padToWorld(s.lx, s.lz, s.h, yaw), r: s.r, g: 'F' as const, t: s.t, k: s.k })),
+    ...FOOT_SPECS.map((s) => ({ c: padToWorld(s.lx, s.lz, s.h, yaw), r: s.r, g: 'G' as const, t: s.t, k: s.k })),
+    ...JET_SPECS.map((s) => ({ c: padToWorld(s.lx, s.lz, s.h, yaw), r: s.r, g: 'G' as const, t: s.t, k: s.k })),
+  ];
+  addMasses(out, banks, rng(seed), detail, maxLevel);
+  addMasses(out, fire, rng(seed + 7919), detail, maxLevel);
+  return out;
+}
+
+function addMasses(out: Puff[], masses: Mass[], rand: () => number, detail: number, maxLevel: number): void {
+  const R = (a: number, b: number) => a + (b - a) * rand();
   const randDir = (): Vec3 => {
     const z = R(-1, 1), a = R(0, Math.PI * 2), s = Math.sqrt(1 - z * z);
     return [s * Math.cos(a), z, s * Math.sin(a)];
   };
 
-  for (const s of L0_SPECS) {
-    const c = worldFromPhoto(fr, s.u, s.d, s.h);
-    const t0 = s.t ?? 0;
-    const k0 = s.k ?? 1;
+  for (const s of masses) {
+    const c = s.c;
+    const t0 = s.t;
+    const k0 = s.k;
     const fire = s.g === 'F';
     out.push({ c, r: s.r, temp: t0, dens: k0, warp: fire ? 0.35 : 0.22, level: 0, seed: rand() });
     if (maxLevel < 1) continue;
@@ -234,34 +319,19 @@ export function buildPuffs(fr: PhotoFrame, opts: BuildOptions = {}): Puff[] {
       }
     }
   }
-  return out;
 }
-
-/**
- * Glowing outflow: the afterburning exhaust leaves both trench ends and runs along the ground under
- * the steam banks, lighting their bases orange from below (the photo's orange lower halves).
- * Light sources only (no density). Columns as L0Spec (u, d, h, r) plus a relative power w.
- */
-export const GLOW_SPECS: { u: number; d: number; h: number; r: number; w: number }[] = [
-  { u: 720, d: 690, h: 6, r: 20, w: 0.45 },   // west outflow
-  { u: 560, d: 690, h: 8, r: 24, w: 0.3 },
-  { u: 400, d: 700, h: 8, r: 26, w: 0.08 },
-  { u: 1040, d: 640, h: 6, r: 20, w: 0.45 },  // east outflow (spreads SE toward the camera)
-  { u: 1200, d: 590, h: 8, r: 24, w: 0.3 },
-  { u: 1380, d: 570, h: 8, r: 26, w: 0.18 },
-];
 
 export interface FireSource { c: Vec3; r: number; w: number }
 
 /**
- * Fire-light emitters (world metres) for the light bake: the hot L0 "F" puffs (weights sum to 1)
- * followed by the glowing outflow (weights relative to the fireball total).
+ * Fire-light emitters (world metres) for the light bake: the hot FIRE_SPECS masses (weights sum to 1)
+ * followed by the glowing outflow along the trench axis (weights relative to the fireball total).
+ * The photo frame is unused now (everything is pad-local) but kept for API stability.
  */
-export function fireSources(fr: PhotoFrame): FireSource[] {
-  const fires = L0_SPECS.filter((s) => s.g === 'F');
-  const tot = fires.reduce((a, s) => a + (s.t ?? 0) * s.r * s.r, 0) || 1;
-  const out: FireSource[] = fires.map((s) => ({ c: worldFromPhoto(fr, s.u, s.d, s.h), r: s.r, w: ((s.t ?? 0) * s.r * s.r) / tot }));
-  for (const g of GLOW_SPECS) out.push({ c: worldFromPhoto(fr, g.u, g.d, g.h), r: g.r, w: g.w });
+export function fireSources(_fr: PhotoFrame, padYaw = DEFAULT_PAD_YAW): FireSource[] {
+  const tot = FIRE_SPECS.reduce((a, s) => a + s.t * s.r * s.r, 0) || 1;
+  const out: FireSource[] = FIRE_SPECS.map((s) => ({ c: padToWorld(s.lx, s.lz, s.h, padYaw), r: s.r, w: (s.t * s.r * s.r) / tot }));
+  for (const g of GLOW_SPECS) out.push({ c: padToWorld(g.lx, g.lz, g.h, padYaw), r: g.r, w: g.w });
   return out;
 }
 

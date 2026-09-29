@@ -132,6 +132,7 @@ export class VolumePass extends Pass {
       uViewMode: { value: 0 }, uFogColor: { value: new THREE.Color() }, uFogDensity: { value: 0 },
       uDriftOffset: V3(), uGrowth: { value: new THREE.Vector3(1, 1, 1) },
       uTempRange: { value: new THREE.Vector2(TEMP_KELVIN_MIN, TEMP_KELVIN_MAX) },
+      uRedden: { value: new THREE.Vector4() }, uDust: { value: new THREE.Vector4(1, 1, 1, 40) }, uSkyOcc: { value: params.skyOcclusion }, uNormalAmb: { value: params.normalAmbient }, uSunDiff: { value: new THREE.Vector2() },
     };
     const perView = () => ({
       uDepth: { value: null as THREE.Texture | null }, uPlume: { value: null as THREE.Texture | null },
@@ -253,6 +254,11 @@ export class VolumePass extends Pass {
     u.uShapeP.value.set(p.shapeAmount, 1 / p.shapeScale, 0);
     u.uDetailP.value.set(p.detailAmount, 1 / p.detailScale, p.crisp);
     u.uNearFade.value = p.nearFade;
+    u.uRedden.value.set(p.reddenR, p.reddenG, p.reddenB, p.reddenHaze);
+    u.uDust.value.set(p.dustR, p.dustG, p.dustB, Math.max(1, p.dustHeight));
+    u.uSkyOcc.value = p.skyOcclusion;
+    u.uNormalAmb.value = p.normalAmbient;
+    u.uSunDiff.value.set(p.sunDiffuse, p.sunAbsorb);
     u.uViewMode.value = g.uViewMode.value;
     u.uFogColor.value.copy(g.uFogColor.value);
     u.uFogDensity.value = g.uFogDensity.value;

@@ -1,7 +1,8 @@
 // Tests for the launch-cloud puff layout (pure math, no WebGL).
 import { describe, expect, it } from 'vitest';
 import { ANCHORS } from '../../scene-config.ts';
-import { L0_SPECS, buildPuffs, fireSources, photoFrameFrom, projectPhoto, type Vec3 } from './puffs.ts';
+import { PAD_YAW } from '../../scene-config.ts';
+import { FIRE_SPECS, FOOT_SPECS, JET_SPECS, L0_SPECS, buildPuffs, fireSources, photoFrameFrom, projectPhoto, type Vec3 } from './puffs.ts';
 
 const pc = ANCHORS.photoCamera;
 const frame = photoFrameFrom(pc.pos.toArray() as Vec3, pc.target.toArray() as Vec3, pc.fovDeg, pc.rollDeg);
@@ -20,17 +21,17 @@ describe('photo frame', () => {
 });
 
 describe('puff layout', () => {
-  const puffs = buildPuffs(frame);
+  const puffs = buildPuffs(frame, { padYaw: PAD_YAW });
 
   it('is deterministic for a given seed', () => {
-    const again = buildPuffs(frame);
+    const again = buildPuffs(frame, { padYaw: PAD_YAW });
     expect(again.length).toBe(puffs.length);
     expect(again[123]).toEqual(puffs[123]);
   });
 
   it('has the three hierarchy levels with a sensible count', () => {
     const n = [0, 1, 2].map((l) => puffs.filter((p) => p.level === l).length);
-    expect(n[0]).toBe(L0_SPECS.length);
+    expect(n[0]).toBe(L0_SPECS.length + FIRE_SPECS.length + FOOT_SPECS.length + JET_SPECS.length);
     expect(n[1]).toBeGreaterThan(n[0] * 5);
     expect(n[2]).toBeGreaterThan(n[1] * 3);
     expect(puffs.length).toBeLessThan(8000); // the splat bake draws every puff once per layer
@@ -61,7 +62,7 @@ describe('puff layout', () => {
   });
 
   it('puts the fireball at the deflector, east of the plume axis', () => {
-    const f = fireSources(frame).slice(0, L0_SPECS.filter((s) => s.g === 'F').length);
+    const f = fireSources(frame, PAD_YAW).slice(0, FIRE_SPECS.length);
     const w = f.reduce((a, s) => a + s.w, 0);
     expect(w).toBeCloseTo(1, 5);
     const cx = f.reduce((a, s) => a + s.c[0] * s.w, 0);
