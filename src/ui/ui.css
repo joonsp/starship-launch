@@ -20,7 +20,7 @@
 .ui-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Everything interactive opts back in to pointer events. */
-.ui-brand, .ui-badge, .ui-top-right, .ui-dock-bar, .ui-lens, .ui-modal, .ui-walk-prompt { pointer-events: auto; }
+.ui-brand, .ui-badge, .ui-top-right, .ui-dock-bar, .ui-lens, .ui-loop, .ui-rec, .ui-modal, .ui-walk-prompt { pointer-events: auto; }
 
 /* Glass surfaces: tokens.css .ui-glass plus a subtle top highlight. */
 .ui-shell .ui-glass {
@@ -239,6 +239,58 @@
 .ui-reset { height: 32px; font-size: 12.5px; color: var(--ui-muted); }
 .ui-reset:hover { color: var(--ui-fg); }
 
+/* ── wallpaper loop: panel, framing guide, recording overlay ──────────────────────────────── */
+.ui-loop-top, .ui-loop-sheet { height: 34px; padding: 0 12px; border-color: var(--ui-border); background: rgba(255, 255, 255, 0.06); font-size: 12.5px; }
+.ui-loop-top:hover { background: rgba(255, 255, 255, 0.14); }
+.ui-loop-top.is-on { background: rgba(108, 195, 255, 0.18); border-color: rgba(108, 195, 255, 0.45); }
+.ui-loop-sheet { display: none; }
+.ui-loop {
+  position: fixed; right: 16px; top: calc(66px + var(--ui-safe-top));
+  width: 320px; max-height: calc(100dvh - 170px); overflow: auto;
+  padding: 14px 16px 12px; border-radius: 16px;
+  z-index: var(--ui-z-panel);
+  animation: ui-pop var(--ui-t) ease both;
+  scrollbar-width: thin;
+}
+.ui-loop-row { margin: 6px 0 10px; }
+.ui-loop-row > .ui-sl-label { display: block; margin-bottom: 6px; }
+.ui-loop .ui-seg { display: flex; width: 100%; }
+.ui-loop .ui-seg-btn { flex: 1; justify-content: center; padding: 0 6px; font-size: 12.5px; }
+.ui-loop-dims { margin: -4px 0 10px; font: 500 11.5px var(--ui-font-mono); color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+.ui-loop-est { margin: -2px 0 8px; font: 500 11.5px var(--ui-font-mono); color: var(--ui-accent-2); font-variant-numeric: tabular-nums; }
+.ui-loop-note { margin: 0 0 8px; font-size: 11.5px; line-height: 1.4; color: var(--ui-muted); }
+.ui-loop-hint { color: var(--ui-muted); opacity: 0.8; }
+.ui-loop-go { height: 36px; padding: 0 16px; font-weight: 600; color: #1c1004; background: var(--ui-accent); border-color: var(--ui-accent); }
+.ui-loop-go:hover { background: #ffab5c; }
+.ui-loop-go .ui-ico { color: #b3261e; }
+.ui-loop-go.is-busy .ui-ico { animation: ui-pulse 0.9s ease-in-out infinite alternate; }
+
+/* Framing guide: the recording's crop of the live view; everything outside it is dimmed. */
+.ui-loop-guide { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.ui-loop-hole { position: absolute; box-shadow: 0 0 0 200vmax rgba(4, 6, 10, 0.72); outline: 1px solid rgba(255, 255, 255, 0.6); outline-offset: -1px; }
+.ui-loop-hole.is-full { outline-color: rgba(108, 195, 255, 0.55); outline-width: 2px; outline-offset: -2px; }
+.ui-loop-hole-label { position: absolute; left: 8px; bottom: 6px; font: 500 10.5px var(--ui-font-mono); color: rgba(255, 255, 255, 0.7); letter-spacing: 0.06em; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
+.ui-shell.is-hidden .ui-loop-guide, .ui-shell.is-locked .ui-loop-guide { display: none; }
+
+/* Recording overlay: covers the (resized, stretched) canvas while frames render offline. */
+.ui-rec {
+  position: fixed; inset: 0; z-index: var(--ui-z-modal);
+  display: grid; place-items: center; padding: 16px;
+  background: rgba(5, 7, 11, 0.9);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.ui-rec-card { width: min(440px, 100%); padding: 18px 20px 16px; border-radius: 18px; background: var(--ui-bg-strong); text-shadow: none; }
+.ui-rec-title { margin: 0 0 12px; font-size: 11px; font-weight: 650; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ui-muted); }
+.ui-rec-preview { display: block; width: 100%; height: auto; border-radius: 10px; background: #05070b; box-shadow: inset 0 0 0 1px var(--ui-border); }
+.ui-rec-bar { height: 3px; margin: 14px 0 10px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.ui-rec-fill { height: 100%; transform-origin: 0 50%; transform: scaleX(0); background: linear-gradient(90deg, #ff7a2e, #ffd39a); transition: transform 0.25s linear; }
+.ui-rec-status { margin: 0 0 4px; font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ui-rec-eta { margin: 0 0 12px; font-size: 11.5px; line-height: 1.4; color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+.ui-rec-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.ui-rec-btn { height: 34px; font-size: 12.5px; border-color: var(--ui-border); background: rgba(255, 255, 255, 0.06); }
+.ui-rec-btn:hover { background: rgba(255, 255, 255, 0.14); }
+.ui-rec-primary { background: rgba(108, 195, 255, 0.2); border-color: rgba(108, 195, 255, 0.5); }
+
 /* dolly checkbox */
 .ui-check-row { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 12px; cursor: pointer; position: relative; }
 .ui-check { position: absolute; opacity: 0; width: 18px; height: 18px; margin: 0; cursor: pointer; }
@@ -349,8 +401,8 @@
 }
 @media (max-width: 1080px) {
   .ui-brand-flight, .ui-brand-sep { display: none; }      /* badge + title still say "Starship" */
-  .ui-export-top .ui-btn-label { display: none; }
-  .ui-export-top { width: 34px; padding: 0; justify-content: center; }
+  .ui-export-top .ui-btn-label, .ui-loop-top .ui-btn-label { display: none; }
+  .ui-export-top, .ui-loop-top { width: 34px; padding: 0; justify-content: center; }
 }
 @media (max-width: 1120px) {
   .ui-modes .ui-seg-label, .ui-sw-drift .ui-sw-label, .ui-lens-btn .ui-btn-label { display: none; }
@@ -390,7 +442,9 @@
   .ui-menu-trigger { width: 100%; }
   .ui-menu.is-open { grid-column: 1 / -1; }
   .ui-menu-pop { position: static; margin-top: 6px; min-width: 0; width: 100%; animation: none; box-shadow: none; background: rgba(255, 255, 255, 0.04); }
-  .ui-export-top { display: none; }
+  .ui-export-top, .ui-loop-top { display: none; }
+  .ui-loop-sheet { display: inline-flex; grid-column: 1 / -1; justify-content: center !important; }
+  .ui-loop { left: 12px; right: 12px; width: auto; top: calc(64px + var(--ui-safe-top)); max-height: calc(100dvh - 170px); }
   .ui-export-sheet { display: inline-flex; grid-column: 1 / -1; justify-content: center !important; }
   .ui-sheet-util { display: flex; grid-column: 1 / -1; gap: 6px; }
   .ui-sheet-util .ui-btn { flex: 1; justify-content: center; }

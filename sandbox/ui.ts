@@ -33,6 +33,7 @@ const handlers: UiHandlers = {
   setLang: (l) => { log('setLang', l); setLang(l); },
   exportStill: () => new Promise<void>((r) => setTimeout(() => { ui.toast('Saved starship-f14.png'); r(); }, 600)),
   setLens: (p) => log('setLens', JSON.stringify(p)),
+  recordLoop: (s) => log('recordLoop', JSON.stringify(s)),
   resetLens: () => { log('resetLens'); ui.update({ lens: { fovDeg: 42.5, dollyZoom: false, rollDeg: 0, tiltShift: { enabled: false, focusY: 0.5, band: 0.2, blur: 0.5 } } }); },
 };
 ui = new UiShell(sb.ctx.uiRoot, handlers, state);

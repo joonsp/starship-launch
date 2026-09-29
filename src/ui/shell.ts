@@ -18,10 +18,11 @@ import { fmt, getLang, onLangChange, t } from '../i18n.ts';
 import { Binder, Menu, Modal, Segmented, Slider, Switch, h, iconButton, isTextEntry } from './dom.ts';
 import { ICONS, MARK } from './icons.ts';
 import { LoadingScreen } from './loading.ts';
+import { LoopOverlay, LoopPanel } from './loop-panel.ts';
 import { LENS_RANGES, MODE_ORDER, PRESET_ORDER, QUALITY_ORDER } from './types.ts';
-import type { QualityChoice, UiHandlers, UiState } from './types.ts';
+import type { LoopSettings, QualityChoice, UiHandlers, UiState } from './types.ts';
 
-export type { QualityChoice, UiHandlers, UiState } from './types.ts';
+export type { LoopFiles, LoopProgressView, LoopSettings, QualityChoice, UiHandlers, UiState } from './types.ts';
 export { LENS_RANGES, LOADING_STAGES, MODE_ORDER, PRESET_ORDER, QUALITY_ORDER } from './types.ts';
 
 const IDLE_MS = 4000;
@@ -56,6 +57,7 @@ export class UiShell {
   private eduSw!: Switch;
   private lensBtn!: HTMLButtonElement;
   private exportBtns: HTMLButtonElement[] = [];
+  private loopBtns: HTMLButtonElement[] = [];
   private menus: Array<Menu<any>> = [];
 
   // lens panel
@@ -68,6 +70,11 @@ export class UiShell {
   private dolly!: HTMLInputElement;
   private tsSw!: Switch;
   private tsGroup!: HTMLElement;
+
+  // wallpaper loop: settings panel + framing guide, and the recording overlay (public: the app drives it)
+  private loopPanel!: LoopPanel;
+  /** Progress / result overlay of a wallpaper-loop recording. */
+  recording!: LoopOverlay;
 
   // overlays
   private help!: Modal;
@@ -97,6 +104,7 @@ export class UiShell {
     this.buildTop();
     this.buildDock();
     this.buildLens();
+    this.buildLoop();
     this.buildWalk();
     this.buildModals();
     this.toasts = h('div', { class: 'ui-toasts', role: 'status', 'aria-live': 'polite' });
@@ -104,7 +112,7 @@ export class UiShell {
 
     // Touch devices have no H key: while everything is hidden a faint corner button brings the interface back.
     this.unhideBtn = iconButton({ icon: ICONS.eye, label: () => t('ui.unhide'), tip: () => t('ui.unhide'), cls: 'ui-unhide ui-icon-only ui-glass', showLabel: false }, () => this.toggleHidden(), this.binder);
-    this.shell.append(this.top, this.lensPanel, this.walk, this.dock, this.toasts, this.unhideBtn, this.help.el, this.about.el, this.loading.el);
+    this.shell.append(this.loopPanel.guide, this.top, this.lensPanel, this.loopPanel.el, this.walk, this.dock, this.toasts, this.unhideBtn, this.recording.el, this.help.el, this.about.el, this.loading.el);
     root.append(this.shell);
     this.placeEdu();
     this.syncAll();
@@ -213,7 +221,7 @@ export class UiShell {
 
     this.top = h('header', { class: 'ui-top ui-chrome' },
       h('div', { class: 'ui-top-left' }, brand, this.badge),
-      h('div', { class: 'ui-top-right ui-glass' }, this.fpsEl, this.langSeg.el, this.makeExport('ui-export-top'), utils));
+      h('div', { class: 'ui-top-right ui-glass' }, this.fpsEl, this.langSeg.el, this.makeLoopBtn('ui-loop-top'), this.makeExport('ui-export-top'), utils));
   }
 
   private buildDock(): void {
@@ -256,7 +264,7 @@ export class UiShell {
 
     this.eduSlot = h('span', { class: 'ui-edu-slot' });
     this.secondary = h('div', { class: 'ui-dock-secondary', id: 'ui-sheet' },
-      this.presetMenu.el, this.qualityMenu.el, this.driftSw.el, this.lensBtn, this.eduSlot, this.makeExport('ui-export-sheet'), sheetUtil);
+      this.presetMenu.el, this.qualityMenu.el, this.driftSw.el, this.lensBtn, this.eduSlot, this.makeLoopBtn('ui-loop-sheet'), this.makeExport('ui-export-sheet'), sheetUtil);
 
     this.menuBtn = iconButton({ icon: ICONS.menu, label: () => t('ui.menu'), tip: () => t('ui.menu.tip'), cls: 'ui-menu-btn ui-icon-only', showLabel: false }, () => this.toggleSheet(), b);
     this.menuBtn.setAttribute('aria-expanded', 'false');
@@ -273,6 +281,20 @@ export class UiShell {
     const btn = iconButton({ icon: ICONS.download, label: () => t('ui.export'), tip: () => t('ui.export.tip'), cls: `ui-export ${cls}` }, () => void this.doExport(), this.binder);
     this.exportBtns.push(btn);
     return btn;
+  }
+
+  /** "Wallpaper loop" opens the loop panel; like export it sits in the top bar, and in the sheet on phones. */
+  private makeLoopBtn(cls: string): HTMLButtonElement {
+    const btn = iconButton({ icon: ICONS.loop, label: () => t('ui.loop'), tip: () => t('ui.loop.tip'), cls: `ui-loop-btn ${cls}` }, () => { this.closeSheet(); this.toggleLoop(); }, this.binder);
+    btn.setAttribute('aria-controls', 'ui-loop');
+    btn.setAttribute('aria-expanded', 'false');
+    this.loopBtns.push(btn);
+    return btn;
+  }
+
+  private buildLoop(): void {
+    this.loopPanel = new LoopPanel(this.binder, () => this.toggleLoop(false, true), (s) => void this.doRecord(s));
+    this.recording = new LoopOverlay(this.binder);
   }
 
   private buildLens(): void {
@@ -418,6 +440,7 @@ export class UiShell {
       // Menus handle their own Esc; this covers panels and the sheet. (Pointer-lock release is the browser's.)
       if (this.menus.some((m) => m.open)) { this.menus.forEach((m) => m.setOpen(false, true)); e.preventDefault(); return; }
       if (this.dock.classList.contains('is-sheet-open')) { this.closeSheet(); this.menuBtn.focus(); e.preventDefault(); return; }
+      if (!modalOpen && this.loopPanel.open) { this.toggleLoop(false, true); e.preventDefault(); return; }
       if (!modalOpen && !this.lensPanel.hidden) { this.toggleLens(false, true); e.preventDefault(); }
       return;
     }
@@ -504,6 +527,16 @@ export class UiShell {
     }
   }
 
+  private recordingLoop = false;
+  private async doRecord(s: LoopSettings): Promise<void> {
+    if (this.recordingLoop) return;
+    this.recordingLoop = true;
+    this.loopPanel.setBusy(true);
+    try { await this.handlers.recordLoop(s); }
+    catch (err) { this.toast(String((err as Error)?.message ?? err)); }
+    finally { this.recordingLoop = false; this.loopPanel.setBusy(false); }
+  }
+
   // ── panels / sheet ──────────────────────────────────────────────────────────────────────────────
 
   private onMenuOpen(m: Menu<any>, open: boolean): void {
@@ -516,6 +549,14 @@ export class UiShell {
     this.lensBtn.classList.toggle('is-on', open);
     if (open) { this.closeSheet(); this.syncLens(); }
     if (focusBtn && !open) this.lensBtn.focus();
+    this.wake();
+  }
+  /** Open the Wallpaper loop panel and its framing guide (?loop=1). */
+  openLoop(): void { this.toggleLoop(true); }
+  private toggleLoop(open: boolean = !this.loopPanel.open, focusBtn = false): void {
+    this.loopPanel.setOpen(open);
+    for (const b of this.loopBtns) { b.setAttribute('aria-expanded', String(open)); b.classList.toggle('is-on', open); }
+    if (focusBtn && !open) this.loopBtns.find((b) => b.offsetParent !== null)?.focus();
     this.wake();
   }
   private toggleSheet(): void {
@@ -538,7 +579,7 @@ export class UiShell {
     else this.eduSlot.after(this.eduSw.el);
   }
   private anyPopoverOpen(): boolean {
-    return this.menus.some((m) => m.open) || this.dock.classList.contains('is-sheet-open') || !this.lensPanel.hidden || this.help.isOpen || this.about.isOpen
+    return this.menus.some((m) => m.open) || this.dock.classList.contains('is-sheet-open') || !this.lensPanel.hidden || this.loopPanel.open || this.help.isOpen || this.about.isOpen
       || (this.shell.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement && (document.activeElement as HTMLInputElement).type === 'range');
   }
 
@@ -588,6 +629,6 @@ export class UiShell {
     this.setChromeInert(this.loading.visible || hide || captured);
   }
   private setChromeInert(inert: boolean): void {
-    for (const el of [this.top, this.dock, this.lensPanel]) el.toggleAttribute('inert', inert);
+    for (const el of [this.top, this.dock, this.lensPanel, this.loopPanel.el]) el.toggleAttribute('inert', inert);
   }
 }

@@ -45,6 +45,7 @@ These are useful for deep links and scripted screenshots.
 | `lang` | `en` (default), `fi` |
 | `ui` | `0` hides all interface chrome |
 | `drift` | `1` starts in slow-drift mode |
+| `loop` | `1` opens the *Wallpaper loop* panel with its framing guide |
 | `probe` | `0` disables the automatic quality probe |
 | `idle` | `0` draws every frame (turns the idle gate off; see *How it renders*) |
 | `bake` | Sky cube face size override, e.g. `512` (only for software-rendered QA) |
@@ -52,7 +53,7 @@ These are useful for deep links and scripted screenshots.
 Example: `?preset=night&mode=walk&quality=low&edu=1&lang=fi&ui=0`.
 
 `window.app` exposes `{ ctx, controller, modules, pipeline, ui, gpu, setPreset, setQuality, setMode, setEdu, setLang,
-setDrift, exportStill, invalidate, stats, ready, frames, drawn }` for automation. `frames` counts animation ticks and
+setDrift, exportStill, recordLoop, invalidate, stats, ready, frames, drawn }` for automation. `frames` counts animation ticks and
 `drawn` counts frames actually drawn (the idle gate skips the rest); `stats` holds the draw calls, triangles and
 programs of the last drawn frame plus `stats.idle`; `gpu` is the GPU-name quality guess. `invalidate()` wakes the idle
 gate. `scripts/qa-shoot.mjs` takes headless screenshots with scripted steps:
@@ -107,6 +108,22 @@ On touch devices there is a virtual joystick at the lower left, and you drag to 
     forms are modelled by light and shade and the long shadows draw them on the ground.
 - **Slow drift:** a gentle animation around the frozen instant. The steam billows and drifts, the plume flickers,
   the engines rumble and the aviation beacons flash. Switching it off returns to the exact frozen still.
+- **Wallpaper loop:** records a seamlessly looping MP4 of slow drift with the camera standing still, plus a PNG
+  poster that is exactly its first frame. Both files share one name, e.g. `starship-loop-2560x1440-20260929-2251.mp4`
+  and `.png`, so a background tool can show the PNG and play the MP4 in its place. Frame the shot in the live view
+  (the dimmed bars show what the output aspect leaves out; fullscreen with F11 frames most faithfully), then pick
+  the resolution, loop length, frame rate and crossfade. The render is offline: every frame is stepped with a fixed
+  time step (after a 3 s warm-up) and encoded with WebCodecs into MP4, so it may take longer than the loop itself.
+  The codec is H.264 where the browser has a hardware H.264 encoder, otherwise VP9 (Chrome's software H.264 encoder
+  ignores the bitrate and makes the slow drift jump at every keyframe), with AV1 as the last resort. The loop closes
+  with a crossfade from the end into the first frames; the film grain holds still during the recording, as in an
+  exported still. From the command line (with the dev server running):
+
+  ```sh
+  node scripts/record-loop.mjs 2560 1440 15 30 ~/Pictures/wallpapers   # width height seconds fps outDir [crossfade]
+  ```
+
+  `window.app.recordLoop({ width, height, seconds, fps, crossfade, download: false })` resolves to the blobs.
 - **Quality:**
   - *Auto* makes a first guess from the GPU name.
   - After loading, a short frame-time probe steps the level down if the frame rate is too low. It only samples
@@ -240,7 +257,8 @@ tests/                  cross-module unit tests (module tests live next to their
 - Map data © OpenStreetMap contributors, available under the Open Database Licence (ODbL):
   <https://www.openstreetmap.org/copyright>. The coastline, tidal flats, roads, buildings, tank farm and tower
   footprints come from it.
-- three.js (MIT), pmndrs postprocessing (Zlib), lil-gui (MIT).
+- three.js (MIT), pmndrs postprocessing (Zlib), lil-gui (MIT), mediabunny (MPL-2.0; MP4 muxing for the wallpaper loop,
+  bundled unmodified, source at https://github.com/Vanilagy/mediabunny).
 - This is an independent educational project. It is not affiliated with or endorsed by SpaceX. "SpaceX", "Starship",
   "Super Heavy" and "Raptor" are used only to describe the subject.
 

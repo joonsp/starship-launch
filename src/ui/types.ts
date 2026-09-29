@@ -19,6 +19,49 @@ export interface UiHandlers {
   /** Partial lens update. When tilt-shift changes, `tiltShift` is always the FULL merged object. */
   setLens(partial: Partial<LensState>): void;
   resetLens(): void;
+  /** Record a seamless wallpaper loop with these settings (the app shows progress through UiShell.recording). */
+  recordLoop(settings: LoopSettings): void | Promise<void>;
+}
+
+/** Output resolutions offered for the wallpaper loop ('screen' = this monitor in device pixels). */
+export type LoopResolutionId = 'screen' | '1080' | '1440' | '2160';
+export const LOOP_RESOLUTIONS: LoopResolutionId[] = ['screen', '1080', '1440', '2160'];
+export const LOOP_SECONDS = [10, 15, 20, 30] as const;
+export const LOOP_FPS = [24, 30, 60] as const;
+export const LOOP_CROSSFADE = { min: 1, max: 4, step: 0.5 };
+
+/** What the wallpaper-loop panel asks the app to record. */
+export interface LoopSettings {
+  width: number;
+  height: number;
+  seconds: number;
+  fps: number;
+  /** Crossfade that closes the loop, in seconds. */
+  crossfade: number;
+}
+
+/** Progress of a running recording, as the overlay displays it. */
+export interface LoopProgressView {
+  phase: 'prepare' | 'warmup' | 'render' | 'finalize';
+  done: number;
+  total: number;
+  /** Output frames encoded / loop frames. */
+  encoded: number;
+  frames: number;
+  etaS: number | null;
+  /** Latest output frame, for the preview thumbnail. */
+  frame?: CanvasImageSource;
+}
+
+/** A finished recording: the two files the wallpaper plugin pairs by name. */
+export interface LoopFiles {
+  stem: string;
+  video: Blob;
+  poster: Blob;
+  /** e.g. "H.264" */
+  codecLabel: string;
+  width: number;
+  height: number;
 }
 
 /** Current app state as the shell displays it. Push changes with UiShell.update(). */

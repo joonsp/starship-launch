@@ -22,6 +22,8 @@ export const ICONS = {
   check: wrap('<path d="M5 12.6l4.4 4.4L19 7.4"/>'),
   close: wrap('<path d="M6 6l12 12M18 6L6 18"/>'),
   reset: wrap('<path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5L4 9.4M4 4.6v4.8h4.8"/>'),
+  loop: wrap('<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3 9h18M3 15h18M7 5.5V9M12 5.5V9M17 5.5V9M7 15v3.5M12 15v3.5M17 15v3.5"/>'),
+  record: wrap('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/>'),
   pause: wrap('<path d="M8.5 6v12M15.5 6v12"/>'),
 };
 

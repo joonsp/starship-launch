@@ -18,10 +18,17 @@
 //
 // URL parameters (QA / deep links):
 //   ?preset=photo|noon|night|thermal|clay  ?mode=orbit|photo|walk|fly  ?quality=auto|low|medium|high|ultra
-//   ?edu=1  ?lang=en|fi  ?ui=0 (hide all chrome)  ?drift=1  ?probe=0 (no auto-quality probe)
+//   ?edu=1  ?lang=en|fi  ?ui=0 (hide all chrome)  ?drift=1  ?loop=1 (open the Wallpaper loop panel + framing guide)
+//   ?probe=0 (no auto-quality probe)
 //   ?bake=512 (sky cube face size override; for software-rendered QA only)  ?idle=0 (draw every frame, no idle gate)
 // window.app = { ctx, controller, modules, pipeline, ui, setPreset, setQuality, setMode, setEdu, setLang, setDrift,
-//                exportStill, invalidate, stats, ready, frames, drawn } for scripted screenshots (scripts/qa-*.mjs).
+//                exportStill, recordLoop, invalidate, stats, ready, frames, drawn } for scripted screenshots (scripts/qa-*.mjs)
+// and the headless wallpaper-loop recorder (scripts/record-loop.mjs).
+//
+// Wallpaper loop (recordLoop): an OFFLINE render, not a screen capture. The frame loop is paused (like exportStill), the
+// drawing buffer is resized to the output size, the camera takes the output aspect (and, for a wider target, a narrower
+// vertical fov: the recording is exactly the crop the framing guide shows), drift is switched on, and src/record/recorder.ts
+// (lazy-loaded with mediabunny) steps the scene with a fixed dt = 1/fps through step() and encodes each frame.
 import './styles/tokens.css';
 import './styles/app.css';
 import * as THREE from 'three';
@@ -30,9 +37,11 @@ import { createEmitter, createGlobals } from './core/context.ts';
 import { CAMERA_FAR, CAMERA_NEAR, Pipeline, createRenderer } from './core/pipeline.ts';
 import { FrameProbe, QUALITY_LEVELS, WARM_FRAMES_MAX, guessQuality, lowerQuality } from './core/quality.ts';
 import { probeStale, shouldDraw } from './core/idle.ts';
+import { evenDims, framingCrop, recordFovDeg, screenDims } from './record/loop-schedule.ts';
+import type { RecordOptions, RecordProgress, RecordResult } from './record/recorder.ts';
 import { ANCHORS, QUALITY, T_F } from './scene-config.ts';
 import { registerStrings, setLang as i18nSetLang, t } from './i18n.ts';
-import { PRESET_ORDER, UiShell, type UiHandlers } from './ui/index.ts';
+import { PRESET_ORDER, UiShell, saveBlob, type LoopSettings, type UiHandlers } from './ui/index.ts';
 import { CameraController } from './controls/index.ts';
 import { EnvironmentModule } from './env/EnvironmentModule.ts';
 import { VehicleModule } from './vehicle/index.ts';
@@ -73,6 +82,7 @@ const initialLang = pick<Lang>('lang', ['en', 'fi'], 'en');
 const initialEdu = params.get('edu') === '1';
 const initialDrift = params.get('drift') === '1';
 const hideUi = params.get('ui') === '0';
+const openLoop = params.get('loop') === '1';   // the Omarchy bar's "Record a new loop" opens <app>?loop=1
 const probeEnabled = params.get('probe') !== '0';
 const idleGate = params.get('idle') !== '0';
 const bakeOverride = Number(params.get('bake')) || undefined;
@@ -186,6 +196,7 @@ const app = {
   invalidate: () => wake(12),
   setPreset, setQuality, setMode, setEdu, setLang, setDrift,
   exportStill: doExport,
+  recordLoop: doRecordLoop,
 };
 (window as unknown as { app: typeof app }).app = app;
 
@@ -362,6 +373,115 @@ async function doExport(download = true): Promise<ExportResult | null> {
   return res;
 }
 
+/** Options of app.recordLoop. Defaults: this screen's device-pixel size, 15 s, 30 fps, 2 s crossfade, 3 s warm-up. */
+interface LoopRequest extends Partial<LoopSettings> {
+  /** Warm-up before the first captured frame (s): the drift EMA of the steam settles. */
+  warmup?: number;
+  /** false: return the blobs instead of downloading (scripts). */
+  download?: boolean;
+  /** Called with every progress report (scripts). */
+  onProgress?: (p: RecordProgress) => void;
+  /** Encoder tuning (scripts): codec preference, bits per pixel per frame, bitrate mode. */
+  codecs?: RecordOptions['codecs'];
+  bitsPerPixel?: number;
+  bitrateMode?: RecordOptions['bitrateMode'];
+  encoder?: RecordOptions['encoder'];
+}
+
+const CODEC_LABEL: Record<string, string> = { avc: 'H.264', vp9: 'VP9', av1: 'AV1', hevc: 'HEVC' };
+let loopAbort = false;
+
+/**
+ * Record a seamless wallpaper loop (MP4) plus its poster PNG (= video frame 0). Resolves to null when cancelled or busy.
+ * The framing is the live view: the recording shows the largest centred crop of the window with the output aspect.
+ */
+async function doRecordLoop(req: LoopRequest = {}): Promise<RecordResult | null> {
+  if (exporting || compiling > 0 || !app.ready) return null;
+  const scr = screenDims(screen.width, screen.height, window.devicePixelRatio || 1);
+  const { width, height } = evenDims(req.width ?? scr.width, req.height ?? scr.height);
+  const settings = { width, height, fps: req.fps ?? 30, seconds: req.seconds ?? 15, crossfade: req.crossfade ?? 2, warmup: req.warmup ?? 3 };
+  const gl = renderer.getContext();
+  const maxDim = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE) as number, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number);
+  if (width > maxDim || height > maxDim) {
+    throw new Error(t('ui.loop.rec.toobig', { w: width, h: height }));   // the shell toasts it
+  }
+
+  exporting = true;       // pauses the frame loop and resize handling; step(..., force) below bypasses the idle gate
+  loopAbort = false;
+  const prev = { aspect: camera.aspect, fov: camera.fov, drift: ctx.globals.uDrift.value > 0, hidden: ui.uiHidden, hotkeys: ui.hotkeys };
+  const overlay = ui.recording;
+  // Static film grain while recording (as in a frozen still): grain re-seeded every frame is most of the frame-to-frame
+  // signal, which starves the encoder, and the crossfade would average two grain fields (visibly less grain at the seam).
+  const finish = post?.effects.finish ?? null;
+  const finishOnFrame = finish?.onFrame ?? null;
+  overlay.begin(width, height, () => { loopAbort = true; });
+  let result: RecordResult | null = null;
+  let failed: unknown = null;
+  try {
+    ui.hotkeys = false;
+    ui.setUiHidden(true);      // also hides the 3D annotations (edu overlay scene) through the MutationObserver
+    const { recordLoop } = await import('./record/recorder.ts');
+
+    // Output framing: the crop of the live view (see the framing guide in the loop panel).
+    const crop = framingCrop(prev.aspect, width / height);
+    camera.aspect = width / height;
+    camera.fov = recordFovDeg(prev.fov, crop);
+    camera.updateProjectionMatrix();
+    pipeline.resizeDrawingBuffer(width, height, 1);
+    pipeline.invalidateShadows();                          // the shadow map is final from the first warm-up frame on
+    if (!prev.drift) setDrift(true);                        // emits 'drift': the accumulation restarts
+    ctx.events.emit({ type: 'camera-moved' });              // reflections re-render at the new projection
+    ctx.events.emit({ type: 'reset-accumulation' });
+    if (finish) finish.onFrame = () => { finishOnFrame?.(); finish.setSeed(0); };
+
+    let simT = ctx.globals.uTime.value;
+    result = await recordLoop({
+      canvas,
+      renderFrame: (dt) => { simT += dt; step(dt, simT, true, true); },   // fixed dt, frozen camera, never idle-gated
+    }, {
+      ...settings,
+      codecs: req.codecs, bitsPerPixel: req.bitsPerPixel, bitrateMode: req.bitrateMode, encoder: req.encoder,
+      aborted: () => loopAbort,
+      onProgress: (p) => { overlay.progress(p); req.onProgress?.(p); },
+    });
+    if (result) {
+      const r = result;
+      console.info(`[loop] ${r.stem}: ${r.frames} frames ${r.width}x${r.height}@${r.fps} ${r.codec} (${r.mimeType}), ${(r.video.size / 1e6).toFixed(1)} MB, `
+        + `render ${(r.renderMs / 1000).toFixed(1)} s (${(r.frames / (r.renderMs / 1000)).toFixed(1)} output fps), total ${(r.totalMs / 1000).toFixed(1)} s`);
+    }
+  } catch (e) {
+    failed = e;
+    console.error('[loop] recording failed', e);
+  } finally {
+    if (finish) finish.onFrame = finishOnFrame;
+    camera.aspect = prev.aspect;
+    camera.fov = prev.fov;
+    camera.updateProjectionMatrix();
+    pipeline.resize();
+    if (!prev.drift) setDrift(false);
+    ui.setUiHidden(prev.hidden);
+    ui.hotkeys = prev.hotkeys;
+    exporting = false;
+    wake(12);
+  }
+
+  if (failed) {
+    const code = (failed as { code?: string }).code;
+    const msg = code === 'no-codec' || code === 'no-webcodecs' ? t('ui.loop.rec.nocodec') : String((failed as Error)?.message ?? failed);
+    if (req.download === false) { overlay.close(); throw failed; }
+    overlay.fail(msg, () => {});
+    return null;
+  }
+  if (!result) { overlay.close(); ui.toast(t('ui.loop.rec.cancelled')); return null; }
+  if (req.download === false) { overlay.close(); return result; }
+  const r = result;
+  // Same stem: the wallpaper plugin plays <stem>.mp4 when the background is <stem>.png.
+  saveBlob(r.video, `${r.stem}.mp4`);
+  saveBlob(r.poster, `${r.stem}.png`);
+  overlay.done({ stem: r.stem, video: r.video, poster: r.poster, codecLabel: CODEC_LABEL[r.codec] ?? r.codec, width: r.width, height: r.height }, () => {});
+  return result;
+}
+
 const handlers: UiHandlers = {
   setCameraMode: (m) => setMode(m),
   setPreset: (p) => setPreset(p),
@@ -372,6 +492,7 @@ const handlers: UiHandlers = {
   exportStill: async () => { await doExport(); },
   setLens: (p) => controls.setLens(p),
   resetLens: () => controls.resetLens(),
+  recordLoop: async (s) => { await doRecordLoop(s); },
 };
 
 const ui = new UiShell(uiRoot, handlers, {
@@ -487,6 +608,7 @@ async function start(): Promise<void> {
   ui.hideLoading();
   app.ready = true;
   wake(12);
+  if (openLoop && !hideUi) ui.openLoop();
   if (qualityChoice === 'auto' && probeEnabled) armProbe();
 
   let fps = 60;
