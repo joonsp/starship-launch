@@ -1,0 +1,1371 @@
+[
+{
+"id": "tank_v_0",
+"kind": "cylinder",
+"centre": [
+34.206,
+3.45,
+-55.926
+],
+"radius": 1.45,
+"height": 6.9
+},
+{
+"id": "tank_v_1",
+"kind": "cylinder",
+"centre": [
+29.797,
+3.45,
+-57.203
+],
+"radius": 1.45,
+"height": 6.9
+},
+{
+"id": "tank_h_2",
+"kind": "box",
+"centre": [
+358.149,
+4.35,
+-23.672
+],
+"size": [
+51.2,
+6.8,
+6.8
+],
+"rotationY": -1.79616
+},
+{
+"id": "tank_h_3",
+"kind": "box",
+"centre": [
+365.949,
+4.35,
+-21.972
+],
+"size": [
+51.2,
+6.8,
+6.8
+],
+"rotationY": -1.79616
+},
+{
+"id": "tank_h_4",
+"kind": "box",
+"centre": [
+261.4,
+4.0,
+-41.55
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.79779
+},
+{
+"id": "tank_h_5",
+"kind": "box",
+"centre": [
+268.127,
+4.0,
+-39.894
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80136
+},
+{
+"id": "tank_h_6",
+"kind": "box",
+"centre": [
+275.801,
+4.0,
+-37.878
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.79926
+},
+{
+"id": "tank_h_7",
+"kind": "box",
+"centre": [
+282.3,
+4.0,
+-36.8
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80223
+},
+{
+"id": "tank_h_8",
+"kind": "box",
+"centre": [
+288.75,
+4.0,
+-35.3
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80019
+},
+{
+"id": "tank_h_9",
+"kind": "box",
+"centre": [
+295.3,
+4.0,
+-33.8
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80433
+},
+{
+"id": "tank_h_10",
+"kind": "box",
+"centre": [
+254.575,
+4.0,
+-43.294
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.8013
+},
+{
+"id": "tank_h_11",
+"kind": "box",
+"centre": [
+247.85,
+4.0,
+-44.95
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80216
+},
+{
+"id": "tank_h_12",
+"kind": "box",
+"centre": [
+241.1,
+4.0,
+-46.55
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80482
+},
+{
+"id": "tank_v_13",
+"kind": "cylinder",
+"centre": [
+314.9,
+3.45,
+-58.25
+],
+"radius": 0.9,
+"height": 6.9
+},
+{
+"id": "tank_v_14",
+"kind": "cylinder",
+"centre": [
+266.94,
+3.45,
+-77.896
+],
+"radius": 1.15,
+"height": 6.9
+},
+{
+"id": "tank_v_15",
+"kind": "cylinder",
+"centre": [
+270.45,
+3.45,
+-77.042
+],
+"radius": 1.15,
+"height": 6.9
+},
+{
+"id": "tank_h_16",
+"kind": "box",
+"centre": [
+232.65,
+4.0,
+-48.5
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.7933
+},
+{
+"id": "tank_h_17",
+"kind": "box",
+"centre": [
+219.15,
+4.0,
+-51.55
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.79376
+},
+{
+"id": "tank_h_18",
+"kind": "box",
+"centre": [
+225.8,
+4.0,
+-50.0
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.79336
+},
+{
+"id": "tank_v_19",
+"kind": "cylinder",
+"centre": [
+103.655,
+3.45,
+-88.556
+],
+"radius": 1.15,
+"height": 6.9
+},
+{
+"id": "tank_v_20",
+"kind": "cylinder",
+"centre": [
+98.942,
+3.45,
+-89.744
+],
+"radius": 1.15,
+"height": 6.9
+},
+{
+"id": "tank_v_21",
+"kind": "cylinder",
+"centre": [
+85.242,
+3.45,
+-92.944
+],
+"radius": 1.15,
+"height": 6.9
+},
+{
+"id": "tank_v_22",
+"kind": "cylinder",
+"centre": [
+80.862,
+3.45,
+-93.95
+],
+"radius": 1.15,
+"height": 6.9
+},
+{
+"id": "tank_v_23",
+"kind": "cylinder",
+"centre": [
+198.555,
+3.45,
+-35.156
+],
+"radius": 1.15,
+"height": 6.9
+},
+{
+"id": "tank_v_24",
+"kind": "cylinder",
+"centre": [
+192.74,
+3.45,
+-36.534
+],
+"radius": 1.15,
+"height": 6.9
+},
+{
+"id": "tank_h_25",
+"kind": "box",
+"centre": [
+66.95,
+2.8,
+-68.15
+],
+"size": [
+40.0,
+3.7,
+3.7
+],
+"rotationY": -1.82394
+},
+{
+"id": "tank_h_26",
+"kind": "box",
+"centre": [
+63.326,
+2.8,
+-69.078
+],
+"size": [
+40.0,
+3.7,
+3.7
+],
+"rotationY": -1.82473
+},
+{
+"id": "tank_h_27",
+"kind": "box",
+"centre": [
+59.567,
+2.8,
+-70.059
+],
+"size": [
+40.0,
+3.7,
+3.7
+],
+"rotationY": -1.82705
+},
+{
+"id": "tank_h_28",
+"kind": "box",
+"centre": [
+55.809,
+2.8,
+-71.098
+],
+"size": [
+40.0,
+3.7,
+3.7
+],
+"rotationY": -1.83141
+},
+{
+"id": "tank_h_29",
+"kind": "box",
+"centre": [
+79.225,
+2.8,
+-64.306
+],
+"size": [
+27.0,
+3.7,
+3.7
+],
+"rotationY": -1.82773
+},
+{
+"id": "tank_h_30",
+"kind": "box",
+"centre": [
+82.93,
+2.8,
+-63.315
+],
+"size": [
+27.0,
+3.7,
+3.7
+],
+"rotationY": -1.82422
+},
+{
+"id": "tank_h_31",
+"kind": "box",
+"centre": [
+86.623,
+2.8,
+-62.333
+],
+"size": [
+27.0,
+3.7,
+3.7
+],
+"rotationY": -1.82251
+},
+{
+"id": "tank_h_32",
+"kind": "box",
+"centre": [
+90.358,
+2.8,
+-61.446
+],
+"size": [
+27.0,
+3.7,
+3.7
+],
+"rotationY": -1.81696
+},
+{
+"id": "tank_v_33",
+"kind": "cylinder",
+"centre": [
+249.854,
+3.45,
+-81.449
+],
+"radius": 1.15,
+"height": 6.9
+},
+{
+"id": "tank_v_34",
+"kind": "cylinder",
+"centre": [
+235.247,
+3.45,
+-85.144
+],
+"radius": 1.15,
+"height": 6.9
+},
+{
+"id": "tank_h_35",
+"kind": "box",
+"centre": [
+415.026,
+5.1,
+-23.106
+],
+"size": [
+32.3,
+8.3,
+8.3
+],
+"rotationY": -1.79479
+},
+{
+"id": "tank_h_36",
+"kind": "box",
+"centre": [
+423.836,
+5.1,
+-21.092
+],
+"size": [
+32.3,
+8.3,
+8.3
+],
+"rotationY": -1.79855
+},
+{
+"id": "tank_h_37",
+"kind": "box",
+"centre": [
+392.599,
+4.0,
+-16.097
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.8003
+},
+{
+"id": "tank_h_38",
+"kind": "box",
+"centre": [
+386.198,
+4.0,
+-17.793
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80044
+},
+{
+"id": "tank_h_39",
+"kind": "box",
+"centre": [
+379.652,
+4.0,
+-19.407
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.7996
+},
+{
+"id": "tank_h_40",
+"kind": "box",
+"centre": [
+373.198,
+4.0,
+-20.893
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80044
+},
+{
+"id": "tank_h_41",
+"kind": "box",
+"centre": [
+52.13,
+2.8,
+-72.155
+],
+"size": [
+40.0,
+3.7,
+3.7
+],
+"rotationY": -1.8333
+},
+{
+"id": "tank_h_42",
+"kind": "box",
+"centre": [
+94.2,
+2.8,
+-60.471
+],
+"size": [
+27.0,
+3.7,
+3.7
+],
+"rotationY": -1.81819
+},
+{
+"id": "tank_h_43",
+"kind": "box",
+"centre": [
+98.25,
+2.8,
+-59.5
+],
+"size": [
+27.0,
+3.7,
+3.7
+],
+"rotationY": -1.81795
+},
+{
+"id": "tank_h_44",
+"kind": "box",
+"centre": [
+301.5,
+4.0,
+-32.3
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80433
+},
+{
+"id": "tank_h_45",
+"kind": "box",
+"centre": [
+307.697,
+4.0,
+-30.817
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80445
+},
+{
+"id": "tank_h_46",
+"kind": "box",
+"centre": [
+351.21,
+4.0,
+-26.194
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80021
+},
+{
+"id": "tank_h_47",
+"kind": "box",
+"centre": [
+344.861,
+4.0,
+-27.897
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.79982
+},
+{
+"id": "tank_v_48",
+"kind": "cylinder",
+"centre": [
+333.44,
+3.45,
+-56.896
+],
+"radius": 1.15,
+"height": 6.9
+},
+{
+"id": "tank_h_49",
+"kind": "box",
+"centre": [
+338.025,
+4.0,
+-29.294
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80532
+},
+{
+"id": "tank_h_50",
+"kind": "box",
+"centre": [
+331.7,
+4.0,
+-30.7
+],
+"size": [
+49.4,
+6.1,
+6.1
+],
+"rotationY": -1.80433
+},
+{
+"id": "tower2_footing_0",
+"kind": "box",
+"centre": [
+-4.694,
+0.6,
+-34.519
+],
+"size": [
+4.2,
+1.8,
+4.2
+],
+"rotationY": -0.56374
+},
+{
+"id": "tower2_leg_0",
+"kind": "box",
+"centre": [
+-4.694,
+66.0,
+-34.519
+],
+"size": [
+1.5,
+132.0,
+1.5
+],
+"rotationY": -0.56374
+},
+{
+"id": "tower2_footing_1",
+"kind": "box",
+"centre": [
+4.519,
+0.6,
+-28.694
+],
+"size": [
+4.2,
+1.8,
+4.2
+],
+"rotationY": -0.56374
+},
+{
+"id": "tower2_leg_1",
+"kind": "box",
+"centre": [
+4.519,
+66.0,
+-28.694
+],
+"size": [
+1.5,
+132.0,
+1.5
+],
+"rotationY": -0.56374
+},
+{
+"id": "tower2_footing_2",
+"kind": "box",
+"centre": [
+-1.306,
+0.6,
+-19.481
+],
+"size": [
+4.2,
+1.8,
+4.2
+],
+"rotationY": -0.56374
+},
+{
+"id": "tower2_leg_2",
+"kind": "box",
+"centre": [
+-1.306,
+66.0,
+-19.481
+],
+"size": [
+1.5,
+132.0,
+1.5
+],
+"rotationY": -0.56374
+},
+{
+"id": "tower2_footing_3",
+"kind": "box",
+"centre": [
+-10.519,
+0.6,
+-25.306
+],
+"size": [
+4.2,
+1.8,
+4.2
+],
+"rotationY": -0.56374
+},
+{
+"id": "tower2_leg_3",
+"kind": "box",
+"centre": [
+-10.519,
+66.0,
+-25.306
+],
+"size": [
+1.5,
+132.0,
+1.5
+],
+"rotationY": -0.56374
+},
+{
+"id": "tower2_annex_0",
+"kind": "box",
+"centre": [
+1.64,
+5.25,
+-34.714
+],
+"size": [
+12.0,
+10.5,
+5.8
+],
+"rotationY": -0.56374
+},
+{
+"id": "tower2_annex_1",
+"kind": "box",
+"centre": [
+-10.109,
+5.25,
+-31.849
+],
+"size": [
+5.6,
+10.5,
+11.0
+],
+"rotationY": -0.56374
+},
+{
+"id": "olm_column_0",
+"kind": "box",
+"centre": [
+-14.0,
+10.0,
+-14.25
+],
+"size": [
+2.6,
+20.0,
+2.6
+],
+"rotationY": 0.0
+},
+{
+"id": "olm_column_1",
+"kind": "box",
+"centre": [
+-5.0,
+10.0,
+-14.25
+],
+"size": [
+2.6,
+20.0,
+2.6
+],
+"rotationY": 0.0
+},
+{
+"id": "olm_column_2",
+"kind": "box",
+"centre": [
+5.0,
+10.0,
+-14.25
+],
+"size": [
+2.6,
+20.0,
+2.6
+],
+"rotationY": 0.0
+},
+{
+"id": "olm_column_3",
+"kind": "box",
+"centre": [
+14.0,
+10.0,
+-14.25
+],
+"size": [
+2.6,
+20.0,
+2.6
+],
+"rotationY": 0.0
+},
+{
+"id": "olm_column_4",
+"kind": "box",
+"centre": [
+-14.0,
+10.0,
+14.25
+],
+"size": [
+2.6,
+20.0,
+2.6
+],
+"rotationY": 0.0
+},
+{
+"id": "olm_column_5",
+"kind": "box",
+"centre": [
+-5.0,
+10.0,
+14.25
+],
+"size": [
+2.6,
+20.0,
+2.6
+],
+"rotationY": 0.0
+},
+{
+"id": "olm_column_6",
+"kind": "box",
+"centre": [
+5.0,
+10.0,
+14.25
+],
+"size": [
+2.6,
+20.0,
+2.6
+],
+"rotationY": 0.0
+},
+{
+"id": "olm_column_7",
+"kind": "box",
+"centre": [
+14.0,
+10.0,
+14.25
+],
+"size": [
+2.6,
+20.0,
+2.6
+],
+"rotationY": 0.0
+},
+{
+"id": "trench_fence_n",
+"kind": "box",
+"centre": [
+0.0,
+0.65,
+-25.0
+],
+"size": [
+96.0,
+1.3,
+0.25
+],
+"rotationY": 0.0
+},
+{
+"id": "trench_fence_s",
+"kind": "box",
+"centre": [
+0.0,
+0.65,
+25.0
+],
+"size": [
+96.0,
+1.3,
+0.25
+],
+"rotationY": 0.0
+},
+{
+"id": "trench_fence_e",
+"kind": "box",
+"centre": [
+48.0,
+0.65,
+0.0
+],
+"size": [
+0.25,
+1.3,
+50.0
+],
+"rotationY": 0.0
+},
+{
+"id": "trench_fence_w",
+"kind": "box",
+"centre": [
+-48.0,
+0.65,
+0.0
+],
+"size": [
+0.25,
+1.3,
+50.0
+],
+"rotationY": 0.0
+},
+{
+"id": "olm_stair_base",
+"kind": "box",
+"centre": [
+8.0,
+10.0,
+20.0
+],
+"size": [
+6.6,
+20.0,
+2.0
+],
+"rotationY": 0.0
+},
+{
+"id": "lightpole_0",
+"kind": "cylinder",
+"centre": [
+-82.0,
+8.0,
+-60.0
+],
+"radius": 0.7,
+"height": 16.0
+},
+{
+"id": "lightpole_1",
+"kind": "cylinder",
+"centre": [
+82.0,
+8.0,
+-60.0
+],
+"radius": 0.7,
+"height": 16.0
+},
+{
+"id": "lightpole_2",
+"kind": "cylinder",
+"centre": [
+-82.0,
+8.0,
+60.0
+],
+"radius": 0.7,
+"height": 16.0
+},
+{
+"id": "lightpole_3",
+"kind": "cylinder",
+"centre": [
+82.0,
+8.0,
+60.0
+],
+"radius": 0.7,
+"height": 16.0
+},
+{
+"id": "lightpole_4",
+"kind": "cylinder",
+"centre": [
+-45.0,
+8.0,
+-62.0
+],
+"radius": 0.7,
+"height": 16.0
+},
+{
+"id": "lightpole_5",
+"kind": "cylinder",
+"centre": [
+45.0,
+8.0,
+62.0
+],
+"radius": 0.7,
+"height": 16.0
+},
+{
+"id": "tower1_footing_0",
+"kind": "box",
+"centre": [
+330.095,
+0.6,
+66.922
+],
+"size": [
+3.6,
+1.8,
+3.6
+],
+"rotationY": -0.60214
+},
+{
+"id": "tower1_leg_0",
+"kind": "box",
+"centre": [
+330.095,
+66.0,
+66.922
+],
+"size": [
+2.0,
+132.0,
+2.0
+],
+"rotationY": -0.60214
+},
+{
+"id": "tower1_footing_1",
+"kind": "box",
+"centre": [
+339.078,
+0.6,
+73.095
+],
+"size": [
+3.6,
+1.8,
+3.6
+],
+"rotationY": -0.60214
+},
+{
+"id": "tower1_leg_1",
+"kind": "box",
+"centre": [
+339.078,
+66.0,
+73.095
+],
+"size": [
+2.0,
+132.0,
+2.0
+],
+"rotationY": -0.60214
+},
+{
+"id": "tower1_footing_2",
+"kind": "box",
+"centre": [
+332.905,
+0.6,
+82.078
+],
+"size": [
+3.6,
+1.8,
+3.6
+],
+"rotationY": -0.60214
+},
+{
+"id": "tower1_leg_2",
+"kind": "box",
+"centre": [
+332.905,
+66.0,
+82.078
+],
+"size": [
+2.0,
+132.0,
+2.0
+],
+"rotationY": -0.60214
+},
+{
+"id": "tower1_footing_3",
+"kind": "box",
+"centre": [
+323.922,
+0.6,
+75.905
+],
+"size": [
+3.6,
+1.8,
+3.6
+],
+"rotationY": -0.60214
+},
+{
+"id": "tower1_leg_3",
+"kind": "box",
+"centre": [
+323.922,
+66.0,
+75.905
+],
+"size": [
+2.0,
+132.0,
+2.0
+],
+"rotationY": -0.60214
+},
+{
+"id": "pad1_leg_0",
+"kind": "cylinder",
+"centre": [
+370.591,
+8.0,
+68.894
+],
+"radius": 1.4,
+"height": 16.0
+},
+{
+"id": "pad1_leg_1",
+"kind": "cylinder",
+"centre": [
+362.106,
+8.0,
+60.409
+],
+"radius": 1.4,
+"height": 16.0
+},
+{
+"id": "pad1_leg_2",
+"kind": "cylinder",
+"centre": [
+350.515,
+8.0,
+63.515
+],
+"radius": 1.4,
+"height": 16.0
+},
+{
+"id": "pad1_leg_3",
+"kind": "cylinder",
+"centre": [
+347.409,
+8.0,
+75.106
+],
+"radius": 1.4,
+"height": 16.0
+},
+{
+"id": "pad1_leg_4",
+"kind": "cylinder",
+"centre": [
+355.894,
+8.0,
+83.591
+],
+"radius": 1.4,
+"height": 16.0
+},
+{
+"id": "pad1_leg_5",
+"kind": "cylinder",
+"centre": [
+367.485,
+8.0,
+80.485
+],
+"radius": 1.4,
+"height": 16.0
+},
+{
+"id": "gse_riser_0",
+"kind": "cylinder",
+"centre": [
+-19.0,
+10.0,
+-19.6
+],
+"radius": 0.5,
+"height": 20.0
+},
+{
+"id": "gse_riser_1",
+"kind": "cylinder",
+"centre": [
+-20.5,
+10.0,
+-19.6
+],
+"radius": 0.5,
+"height": 20.0
+},
+{
+"id": "gse_riser_2",
+"kind": "cylinder",
+"centre": [
+-22.0,
+10.0,
+-19.6
+],
+"radius": 0.5,
+"height": 20.0
+},
+{
+"id": "gse_rack_north",
+"kind": "box",
+"centre": [
+60.0,
+1.3,
+-42.0
+],
+"size": [
+170.0,
+2.6,
+4.0
+],
+"rotationY": 0.0
+},
+{
+"id": "gse_water_main",
+"kind": "box",
+"centre": [
+25.0,
+0.7,
+-32.0
+],
+"size": [
+1.6,
+1.4,
+25.0
+],
+"rotationY": 0.0
+}
+]

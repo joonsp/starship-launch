@@ -1,0 +1,590 @@
+{
+ "meta": {
+  "source": "research/reference.jpeg 1677x943, 13x13 (or 9x9) pixel mean, sRGB 8-bit, origin top-left, x right y down",
+  "provenance": "src (measured from image)",
+  "caveat": "JPEG is already graded/tone-mapped and probably sharpened; treat as display-referred targets, not scene-linear radiance"
+ },
+ "swatches": [
+  {
+   "name": "sky_zenith_deep",
+   "hex": "#127ebe",
+   "px": [
+    60,
+    40
+   ],
+   "role": "sky",
+   "note": "saturated cerulean top-left; HSV h~202deg s0.89 v0.73"
+  },
+  {
+   "name": "sky_top_mid",
+   "hex": "#1c74ad",
+   "px": [
+    700,
+    20
+   ],
+   "role": "sky",
+   "note": ""
+  },
+  {
+   "name": "sky_gap_left_upper",
+   "hex": "#3184bc",
+   "px": [
+    300,
+    90
+   ],
+   "role": "sky",
+   "note": ""
+  },
+  {
+   "name": "sky_upper_right_hazy",
+   "hex": "#9ab2c9",
+   "px": [
+    1350,
+    30
+   ],
+   "role": "sky",
+   "note": "right side washed by cirrus/haze"
+  },
+  {
+   "name": "sky_gap_mid_upper",
+   "hex": "#7fa5c2",
+   "px": [
+    700,
+    120
+   ],
+   "role": "sky",
+   "note": ""
+  },
+  {
+   "name": "sky_gap_right_mid",
+   "hex": "#91b1c3",
+   "px": [
+    1230,
+    300
+   ],
+   "role": "sky",
+   "note": ""
+  },
+  {
+   "name": "sky_horizon_left",
+   "hex": "#8bb4bc",
+   "px": [
+    40,
+    400
+   ],
+   "role": "sky",
+   "note": "teal-grey horizon haze; s0.27"
+  },
+  {
+   "name": "sky_below_cloud_centre",
+   "hex": "#9caeaf",
+   "px": [
+    720,
+    430
+   ],
+   "role": "sky",
+   "note": ""
+  },
+  {
+   "name": "cirrus_streak",
+   "hex": "#7897b4",
+   "px": [
+    1150,
+    60
+   ],
+   "role": "cirrus",
+   "note": "only slightly lighter than sky; low contrast streaks"
+  },
+  {
+   "name": "cloud_highlight_warm",
+   "hex": "#e4d6c1",
+   "px": [
+    80,
+    190
+   ],
+   "role": "cloud_lit",
+   "note": "sun-lit cumulus, warm cream"
+  },
+  {
+   "name": "cloud_highlight_centre",
+   "hex": "#e4d4bc",
+   "px": [
+    900,
+    190
+   ],
+   "role": "cloud_lit",
+   "note": ""
+  },
+  {
+   "name": "cloud_brightest",
+   "hex": "#e8d6bd",
+   "px": [
+    560,
+    430
+   ],
+   "role": "cloud_lit",
+   "note": ""
+  },
+  {
+   "name": "cloud_shadow_neutral",
+   "hex": "#797978",
+   "px": [
+    760,
+    340
+   ],
+   "role": "cloud_shadow",
+   "note": "neutral grey, almost no blue"
+  },
+  {
+   "name": "cloud_belly",
+   "hex": "#6a6c69",
+   "px": [
+    1000,
+    390
+   ],
+   "role": "cloud_shadow",
+   "note": ""
+  },
+  {
+   "name": "cloud_shadow_lilac",
+   "hex": "#776568",
+   "px": [
+    1290,
+    300
+   ],
+   "role": "cloud_shadow",
+   "note": "pinkish-lilac: bounce from orange plume"
+  },
+  {
+   "name": "plume_billow_white_left",
+   "hex": "#8598a5",
+   "px": [
+    150,
+    500
+   ],
+   "role": "steam_shadowed",
+   "note": "cool blue-grey shaded white steam"
+  },
+  {
+   "name": "plume_billow_shadow_left",
+   "hex": "#718593",
+   "px": [
+    180,
+    560
+   ],
+   "role": "steam_shadow",
+   "note": ""
+  },
+  {
+   "name": "plume_billow_blue_right",
+   "hex": "#5d6572",
+   "px": [
+    1450,
+    420
+   ],
+   "role": "steam_shadow",
+   "note": "coolest steam shadow, skylit"
+  },
+  {
+   "name": "plume_billow_dark_right",
+   "hex": "#666367",
+   "px": [
+    1400,
+    400
+   ],
+   "role": "steam_shadow",
+   "note": ""
+  },
+  {
+   "name": "plume_cream_left",
+   "hex": "#d3c0a6",
+   "px": [
+    530,
+    340
+   ],
+   "role": "steam_lit",
+   "note": ""
+  },
+  {
+   "name": "plume_peach_left",
+   "hex": "#cbac81",
+   "px": [
+    330,
+    400
+   ],
+   "role": "steam_lit",
+   "note": ""
+  },
+  {
+   "name": "plume_orange_lit_right",
+   "hex": "#d4a164",
+   "px": [
+    1500,
+    560
+   ],
+   "role": "steam_orange",
+   "note": "sun/plume-lit steam, R/B~2.7"
+  },
+  {
+   "name": "plume_orange_top_right",
+   "hex": "#cd975d",
+   "px": [
+    1560,
+    150
+   ],
+   "role": "steam_orange",
+   "note": ""
+  },
+  {
+   "name": "plume_orange_mid_left",
+   "hex": "#d89451",
+   "px": [
+    480,
+    540
+   ],
+   "role": "steam_orange",
+   "note": "most saturated steam orange"
+  },
+  {
+   "name": "plume_wall_dark_base",
+   "hex": "#412f2c",
+   "px": [
+    1250,
+    700
+   ],
+   "role": "steam_shadow",
+   "note": "dark shadowed base of right cloud"
+  },
+  {
+   "name": "plume_base_grey_brown",
+   "hex": "#805a48",
+   "px": [
+    1000,
+    690
+   ],
+   "role": "steam_orange",
+   "note": ""
+  },
+  {
+   "name": "fire_hot_core",
+   "hex": "#fbf7a3",
+   "px": [
+    840,
+    655
+   ],
+   "role": "fire",
+   "note": "clipped yellow-white; lowest ground glow"
+  },
+  {
+   "name": "fire_yellow_base",
+   "hex": "#f7e693",
+   "px": [
+    850,
+    640
+   ],
+   "role": "fire",
+   "note": ""
+  },
+  {
+   "name": "fire_orange_edge",
+   "hex": "#f5960e",
+   "px": [
+    900,
+    650
+   ],
+   "role": "fire",
+   "note": "saturated orange sheath; near-pure blackbody-like 2000-2500K hue"
+  },
+  {
+   "name": "plume_glow_lower_tower_lit",
+   "hex": "#ea9d6d",
+   "px": [
+    800,
+    600
+   ],
+   "role": "fire_glow",
+   "note": "tower/steam lit by fire"
+  },
+  {
+   "name": "plume_column_pink_white",
+   "hex": "#f5e4e7",
+   "px": [
+    818,
+    540
+   ],
+   "role": "plume",
+   "note": "pink-white column; slight magenta tint, clipped"
+  },
+  {
+   "name": "plume_column_upper",
+   "hex": "#f7e3e7",
+   "px": [
+    820,
+    470
+   ],
+   "role": "plume",
+   "note": ""
+  },
+  {
+   "name": "booster_body_lit",
+   "hex": "#9f9080",
+   "px": [
+    822,
+    380
+   ],
+   "role": "vehicle",
+   "note": "warm-lit stainless (sun+plume), frost/soot"
+  },
+  {
+   "name": "booster_body_dark",
+   "hex": "#434345",
+   "px": [
+    822,
+    330
+   ],
+   "role": "vehicle",
+   "note": "shadowed band; neutral cool"
+  },
+  {
+   "name": "booster_low_pink",
+   "hex": "#99877a",
+   "px": [
+    820,
+    420
+   ],
+   "role": "vehicle",
+   "note": ""
+  },
+  {
+   "name": "ship_black",
+   "hex": "#1d1b1a",
+   "px": [
+    824,
+    265
+   ],
+   "role": "vehicle",
+   "note": "black-painted ship/nose section"
+  },
+  {
+   "name": "tower_red",
+   "hex": "#7b5958",
+   "px": [
+    795,
+    540
+   ],
+   "role": "vehicle",
+   "note": "launch tower, red/rust"
+  },
+  {
+   "name": "tower_top",
+   "hex": "#755e5c",
+   "px": [
+    835,
+    495
+   ],
+   "role": "vehicle",
+   "note": ""
+  },
+  {
+   "name": "ocean_far",
+   "hex": "#45626d",
+   "px": [
+    900,
+    545
+   ],
+   "role": "water",
+   "note": "deep teal-grey Gulf; nearly flat, horizon line y~525"
+  },
+  {
+   "name": "ocean_left",
+   "hex": "#547884",
+   "px": [
+    30,
+    540
+   ],
+   "role": "water",
+   "note": ""
+  },
+  {
+   "name": "ocean_right",
+   "hex": "#66797d",
+   "px": [
+    1620,
+    600
+   ],
+   "role": "water",
+   "note": ""
+  },
+  {
+   "name": "pool_orange_refl",
+   "hex": "#966438",
+   "px": [
+    480,
+    850
+   ],
+   "role": "tidal_pool",
+   "note": "pool reflecting orange steam"
+  },
+  {
+   "name": "pool_sky_refl_bottom_right",
+   "hex": "#717b84",
+   "px": [
+    1620,
+    925
+   ],
+   "role": "tidal_pool",
+   "note": "pool reflecting grey/blue sky"
+  },
+  {
+   "name": "pool_left_dark",
+   "hex": "#32251d",
+   "px": [
+    250,
+    880
+   ],
+   "role": "tidal_pool",
+   "note": "many pool areas read as dark brown"
+  },
+  {
+   "name": "marsh_olive_dark",
+   "hex": "#483b24",
+   "px": [
+    60,
+    640
+   ],
+   "role": "ground",
+   "note": "dark olive marsh vegetation"
+  },
+  {
+   "name": "tidal_flat_brown",
+   "hex": "#34251e",
+   "px": [
+    700,
+    850
+   ],
+   "role": "ground",
+   "note": "wet brown mud"
+  },
+  {
+   "name": "tidal_flat_mid",
+   "hex": "#422e24",
+   "px": [
+    1200,
+    810
+   ],
+   "role": "ground",
+   "note": ""
+  },
+  {
+   "name": "pad_concrete_warm",
+   "hex": "#55403e",
+   "px": [
+    950,
+    745
+   ],
+   "role": "ground",
+   "note": "launch pad concrete under orange bounce"
+  },
+  {
+   "name": "asphalt_left",
+   "hex": "#15191a",
+   "px": [
+    100,
+    700
+   ],
+   "role": "ground",
+   "note": "near black asphalt/road"
+  },
+  {
+   "name": "sandbank_dark",
+   "hex": "#2d2b2a",
+   "px": [
+    700,
+    555
+   ],
+   "role": "ground",
+   "note": ""
+  }
+ ],
+ "grading_target": {
+  "image_stats": {
+   "mean_rgb": [
+    116.3,
+    116.0,
+    114.9
+   ],
+   "luma_percentiles_rec709_0_255": {
+    "p1": 19.4,
+    "p5": 31.4,
+    "p25": 77.5,
+    "p50": 115.5,
+    "p75": 155.1,
+    "p95": 199,
+    "p99": 216.9,
+    "p99.9": 238.8
+   },
+   "mean_hsv_saturation": 0.329,
+   "note": "Mean is neutral grey (warm plume balances blue sky). Bright-pixel (luma>215, 1.2% of pixels) mean = (239.5,222,191) i.e. warm cream, not white."
+  },
+  "colour_temperature": {
+   "sun_light_est": "~4500-5000 K (low golden-hour sun, warm cream highlights R-B~35-45)",
+   "sky_fill_est": "~9000-12000 K blue skylight (shadows on steam are blue-grey R<G<B: 93,101,114)",
+   "fire_glow_est": "~2000-2600 K orange sheath (245,150,14); core clipped to pale yellow 251,247,163",
+   "note": "est: derived from RGB ratios; not measured with a calibrated camera"
+  },
+  "contrast": {
+   "overall": "medium-high, punchy local contrast (sharpened HDR-look). Sky saturation very high at top-left (s=0.89) falling to 0.27 at the horizon.",
+   "shadow_floor": "p1 luma ~19/255 (~7.6%); ground is dark brown/black; crush is mild, not clipped",
+   "clean_black": "ship nose (29,27,26)"
+  },
+  "highlight_rolloff": {
+   "description": "Soft. Only ~0.1% of pixels above 239. Cloud highlights sit at 225-232 (never 255) and keep colour; only the fire core and plume column clip (to yellow-white / pink-white). Use AgX or filmic shoulder, exposure so sun-lit cloud tops land ~0.85-0.9 display-linear-ish.",
+   "suggested_pipeline": "linear HDR -> bloom(mipmap, intensity ~0.6-0.9, threshold ~0.9 linear, radius 0.7) -> AgX (or ACES) -> LUT: lift blacks to ~#12100f (no pure black), push shadows on steam slightly towards blue/teal, keep highlights warm; saturation +8..12%; vignette darkness ~0.35; slight grain 0.03"
+  },
+  "split_tone": {
+   "shadows": "teal/blue-grey (#5d6572..#718593)",
+   "midtones": "neutral",
+   "highlights": "warm cream/orange (#e4d6c1, #d89451)"
+  },
+  "hero_orange_ramp": [
+   "#fbf7a3",
+   "#f7e693",
+   "#f5960e",
+   "#d89451",
+   "#d4a164",
+   "#cbac81",
+   "#d3c0a6",
+   "#e4d6c1"
+  ],
+  "hero_blue_ramp": [
+   "#127ebe",
+   "#3184bc",
+   "#7fa5c2",
+   "#9ab2c9",
+   "#8bb4bc",
+   "#5d6572"
+  ]
+ },
+ "layout": {
+  "horizon_y_px": 525,
+  "sea_band_y_px": [
+   520,
+   560
+  ],
+  "rocket_axis_x_px": 818,
+  "rocket_tip_y_px": 235,
+  "tower_x_px": [
+   785,
+   850
+  ],
+  "fire_glow_centre_px": [
+   830,
+   650
+  ],
+  "brightest_pixel_cluster_px": [
+   819,
+   622
+  ],
+  "note": "Sky occupies y<~520 (55% of frame). Left and right steam clouds are asymmetric: right is taller/wider, more orange-lit; left is smaller with white billows in shadow. Sun appears low, lighting cloud tops warm from behind-left / upper (est)."
+ }
+}

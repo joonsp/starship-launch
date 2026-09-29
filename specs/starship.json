@@ -1,0 +1,1336 @@
+{
+ "_doc": "Single source of truth. v = value; src = URL (sourced) or est = reasoning (estimate). Namespaces: vehicle.*, pad.*, physics.*, scene.*. Merged from research/*.spec.json; conflicts resolved by the orchestrator (see research/notes.md).",
+ "values": {
+  "vehicle.stack.height": {
+   "v": 124,
+   "unit": "m",
+   "src": "https://spaceflightnow.com/2026/09/28/live-coverage-spacex-to-launch-first-starlink-v3-satellites-to-orbit-on-starship/ (124 m / 407 ft)"
+  },
+  "vehicle.common.diameter": {
+   "v": 9,
+   "unit": "m",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "vehicle.common.ring_height": {
+   "v": 1.83,
+   "unit": "m",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (rings 9 m dia, 1.83 m tall)"
+  },
+  "vehicle.common.ring_count_ship_wiki": {
+   "v": 21,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship_(spacecraft) (Block 1/2 ship; est. similar for Block 3)"
+  },
+  "vehicle.booster.length": {
+   "v": 72.3,
+   "unit": "m",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (Block 3)"
+  },
+  "vehicle.booster.length_v2": {
+   "v": 71,
+   "unit": "m",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "vehicle.booster.ring_count": {
+   "v": 33,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (Block 1/2 count; V3 similar, est)"
+  },
+  "vehicle.booster.aft_short_ring_height": {
+   "v": 1.4,
+   "unit": "m",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (four short aft rings)"
+  },
+  "vehicle.booster.propellant_mass": {
+   "v": 3650,
+   "unit": "t",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship (Block 3; Wikipedia Super Heavy page says 3400 t for earlier blocks)"
+  },
+  "vehicle.booster.thrust": {
+   "v": 80.8,
+   "unit": "MN",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship"
+  },
+  "vehicle.booster.engine_count": {
+   "v": 33,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "vehicle.booster.engine_ring_outer.count": {
+   "v": 20,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (20 fixed outer)"
+  },
+  "vehicle.booster.engine_ring_inner.count": {
+   "v": 13,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (13 gimballing = ring of 10 + centre 3)"
+  },
+  "vehicle.booster.engine_ring_outer.radius": {
+   "v": 3.95,
+   "unit": "m",
+   "est": "Outer ring pitch radius; nozzle edge at 4.55 m, flush with the 4.5 m skirt (the engine shields slightly flare). Orchestrator decision."
+  },
+  "vehicle.booster.engine_ring_mid.count": {
+   "v": 10,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "vehicle.booster.engine_ring_mid.radius": {
+   "v": 2.45,
+   "unit": "m",
+   "est": "10 x 1.2 m nozzles need at least 1.91 m; 2.45 leaves a 0.3 m gap to the outer ring"
+  },
+  "vehicle.booster.engine_ring_centre.count": {
+   "v": 3,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "vehicle.booster.engine_ring_centre.radius": {
+   "v": 0.85,
+   "unit": "m",
+   "est": "3 engines mutually 108-108-144 deg per NSF/search summary https://www.nasaspaceflight.com/2026/05/super-heavy-block-3-booster-future/"
+  },
+  "vehicle.booster.engine_ring_centre.clocking": {
+   "v": [
+    108,
+    108,
+    144
+   ],
+   "unit": "deg",
+   "src": "https://www.nasaspaceflight.com/2026/05/super-heavy-block-3-booster-future/ (search-result text; page itself 403)"
+  },
+  "vehicle.booster.engine_ring_mid.clock_offset": {
+   "v": 9,
+   "unit": "deg",
+   "est": "mid ring rotated for pad deflector; amount unknown; 18 deg would be half pitch of 36 deg, 9 deg chosen as placeholder"
+  },
+  "vehicle.booster.engine_outer_angular_pitch": {
+   "v": 18,
+   "unit": "deg",
+   "est": "360/20"
+  },
+  "vehicle.raptor3.nozzle_exit_diameter_sl": {
+   "v": 1.2,
+   "unit": "m",
+   "est": "Packing constraint: 20 outer nozzles must fit on a ring inside the 4.5 m skirt radius (2*pi*3.95/20 = 1.24 m spacing). Raptor 1's 1.3 m would overlap. Orchestrator decision."
+  },
+  "vehicle.raptor3.length_sl": {
+   "v": 3.1,
+   "unit": "m",
+   "est": "Raptor 2 sea-level ~3.1 m; Raptor 3 slightly shorter"
+  },
+  "vehicle.raptor3.rvac_nozzle_exit_diameter": {
+   "v": 2.4,
+   "unit": "m",
+   "est": "RVac about 2.4 m per general knowledge; not confirmed by search"
+  },
+  "vehicle.booster.engine_plane_y": {
+   "v": 0,
+   "unit": "m",
+   "est": "reference origin: nozzle exit plane; thrust plate about 3.2 m above"
+  },
+  "vehicle.booster.engine_thrust_plate_height": {
+   "v": 3.2,
+   "unit": "m",
+   "est": "aft skirt with four 1.4 m rings starts about 3-5 m up; V3 engines mounted on steel plate not dome (https://www.nasaspaceflight.com/2026/05/super-heavy-block-3-booster-future/)"
+  },
+  "vehicle.booster.lox_tank_bottom_height": {
+   "v": 5.6,
+   "unit": "m",
+   "est": "above four 1.4 m aft rings"
+  },
+  "vehicle.booster.common_dome_height": {
+   "v": 44,
+   "unit": "m",
+   "est": "fits photo frost boundary at y=366 px => 45 m up; propellant split about 78/22 by mass (O/F 3.6) gives about 57/43 by volume"
+  },
+  "vehicle.booster.ch4_tank_top_height": {
+   "v": 62,
+   "unit": "m",
+   "est": "below hot-stage / forward dome region"
+  },
+  "vehicle.booster.hot_stage_zone.bottom_height": {
+   "v": 62,
+   "unit": "m",
+   "est": "integrated open N1-style truss hot-stage, exhaust hits booster forward dome (https://www.nasaspaceflight.com/2026/05/super-heavy-block-3-booster-future/)"
+  },
+  "vehicle.booster.hot_stage_zone.height": {
+   "v": 10.3,
+   "unit": "m",
+   "est": "72.3 minus 62; vented open truss with about 12 struts"
+  },
+  "vehicle.booster.hot_stage_vent_count": {
+   "v": 12,
+   "unit": "count",
+   "est": "placeholder for the vent bays in the open truss; unverified"
+  },
+  "vehicle.booster.grid_fin.count": {
+   "v": 3,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship"
+  },
+  "vehicle.booster.grid_fin.scale_vs_v2": {
+   "v": 1.5,
+   "unit": "x",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship (roughly 1.5x size of Block 1/2 fins)"
+  },
+  "vehicle.booster.grid_fin.azimuth_deg": {
+   "v": [
+    30,
+    150,
+    270
+   ],
+   "unit": "deg",
+   "est": "Photo: fins protrude on both silhouette sides with the belly at azimuth 90; supersedes [0,120,240]"
+  },
+  "vehicle.booster.grid_fin.hinge_height": {
+   "v": 66.8,
+   "unit": "m",
+   "est": "Photo-derived by the vehicle builder: fins are visible as horizontal dashes about 5.5 m below the ship base (rows about 331). Supersedes the research estimate of 62.5 m."
+  },
+  "vehicle.booster.grid_fin.span": {
+   "v": 3.6,
+   "unit": "m",
+   "est": "V2 fin about 2.9 x 3.3 m scaled to give 1.5x area (ratio 1.22 each side)"
+  },
+  "vehicle.booster.catch_pin_count": {
+   "v": 2,
+   "unit": "count",
+   "est": "two pins on opposite sides for chopsticks"
+  },
+  "vehicle.booster.catch_pin_height": {
+   "v": 64,
+   "unit": "m",
+   "est": "in hot-stage region above CH4 tank; Pad 2 chopsticks are about 10 m shorter than Pad 1 (https://nasaspaceflight.com/2025/08/starbase-pad-2-advancements-pad-1/)"
+  },
+  "vehicle.booster.raceway_count": {
+   "v": 2,
+   "unit": "count",
+   "est": "cable raceways run along the booster length"
+  },
+  "vehicle.booster.frost.lox_tank_fraction_of_height": {
+   "v": 0.6,
+   "unit": "frac",
+   "est": "photo: lower 60% bright frost"
+  },
+  "vehicle.ship.length": {
+   "v": 52.1,
+   "unit": "m",
+   "est": "124 m stack (src SFN) minus 72.3 m booster = 51.7; V2 ship 52.1 m (https://en.wikipedia.org/wiki/SpaceX_Starship_(spacecraft)). Wikipedia lists Block 3 ship as 61 m (est) which contradicts the 124 m stack; rejected"
+  },
+  "vehicle.ship.length_conflict_wiki_v3": {
+   "v": 61,
+   "unit": "m",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship (marked est; rejected)"
+  },
+  "vehicle.ship.engine_count": {
+   "v": 6,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship_(spacecraft)"
+  },
+  "vehicle.ship.rvac.count": {
+   "v": 3,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship_(spacecraft)"
+  },
+  "vehicle.ship.rsl.count": {
+   "v": 3,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship_(spacecraft)"
+  },
+  "vehicle.ship.rvac.radius": {
+   "v": 1.7,
+   "unit": "m",
+   "est": "centre triangle of 3 RVac with 2.4 m nozzles; spacing 2.9 m"
+  },
+  "vehicle.ship.rsl.radius": {
+   "v": 3.3,
+   "unit": "m",
+   "est": "3 sea-level engines in outer ring, clocked 60 deg from RVacs"
+  },
+  "vehicle.ship.rvac.azimuth_deg": {
+   "v": [
+    0,
+    120,
+    240
+   ],
+   "unit": "deg",
+   "est": "triangle"
+  },
+  "vehicle.ship.rsl.azimuth_deg": {
+   "v": [
+    60,
+    180,
+    300
+   ],
+   "unit": "deg",
+   "est": "interleaved with RVacs"
+  },
+  "vehicle.ship.aft_flap.count": {
+   "v": 2,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship_(spacecraft)"
+  },
+  "vehicle.ship.aft_flap.hinge_height": {
+   "v": 4.5,
+   "unit": "m",
+   "est": "side of engine bay/LOX tank; V2 aft flap about 9 x 4 m"
+  },
+  "vehicle.ship.aft_flap.size": {
+   "v": [
+    9.0,
+    4.0
+   ],
+   "unit": "m",
+   "est": "length x chord; photo flare 26 px wide about 15.5 m"
+  },
+  "vehicle.ship.forward_flap.count": {
+   "v": 2,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship_(spacecraft)"
+  },
+  "vehicle.ship.forward_flap.hinge_height": {
+   "v": 42.0,
+   "unit": "m",
+   "est": "just below nose cone base; V2/V3 thinner, angled about 140 deg (src W3 for angle)"
+  },
+  "vehicle.ship.forward_flap.size": {
+   "v": [
+    5.5,
+    2.5
+   ],
+   "unit": "m",
+   "est": "V2 fwd flap about 5.5 x 2.5"
+  },
+  "vehicle.ship.nose.base_height": {
+   "v": 42.5,
+   "unit": "m",
+   "est": "cylinder-to-ogive junction; ship 52.1"
+  },
+  "vehicle.ship.nose.height": {
+   "v": 9.6,
+   "unit": "m",
+   "est": "tangent ogive; tip radius about 0.3 m; header tanks in nose"
+  },
+  "vehicle.ship.nose.tip_radius": {
+   "v": 0.3,
+   "unit": "m",
+   "est": "photo tip 5 px wide about 3 m at blur; real tip smaller"
+  },
+  "vehicle.ship.nose.profile": {
+   "v": "power-law cone r = R (x/L)^0.85, blunt tip 0.3 m, blended over the last 2.4 m",
+   "unit": "",
+   "est": "Photo nose is slimmer than a tangent ogive (about 6.8 m wide 7.6 m below the tip)"
+  },
+  "vehicle.ship.lox_tank_bottom_height": {
+   "v": 7.0,
+   "unit": "m",
+   "est": "above engine bay"
+  },
+  "vehicle.ship.common_dome_height": {
+   "v": 22.5,
+   "unit": "m",
+   "est": "LOX below, CH4 above; O/F 3.6 gives about 58% of tank volume LOX"
+  },
+  "vehicle.ship.ch4_tank_top_height": {
+   "v": 38.0,
+   "unit": "m",
+   "est": "below payload bay"
+  },
+  "vehicle.ship.header_tank_height": {
+   "v": [
+    45,
+    50
+   ],
+   "unit": "m",
+   "est": "LOX and CH4 header tanks in the nose; V2 had them inside the nose cone/payload bay"
+  },
+  "vehicle.ship.tile.hex_size": {
+   "v": 0.32,
+   "unit": "m",
+   "est": "hexagon across flats about 30-35 cm"
+  },
+  "vehicle.ship.tile.gap": {
+   "v": 0.006,
+   "unit": "m",
+   "est": "about 5 mm expansion gap"
+  },
+  "vehicle.ship.tile.count_windward": {
+   "v": 18000,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship_(spacecraft) (about 18,000; another source says about 20,000)"
+  },
+  "vehicle.ship.tile.coverage": {
+   "v": "windward half plus nose cone",
+   "est": "photo: ship looks black over full visible length"
+  },
+  "vehicle.ship.tile.colour_rgb": {
+   "v": [
+    15,
+    14,
+    17
+   ],
+   "unit": "rgb",
+   "est": "pixel sample of photo"
+  },
+  "vehicle.ship.leeward.colour": {
+   "v": "bare stainless steel",
+   "est": "not visible in photo; 304L tumbled finish"
+  },
+  "vehicle.ship.qd_plate.height": {
+   "v": [
+    41.0,
+    42.0
+   ],
+   "unit": "m",
+   "est": "ship quick-disconnect / QD plate near forward end of the tank section; Block 3 adds refuelling hardware (https://en.wikipedia.org/wiki/SpaceX_Starship)"
+  },
+  "vehicle.stack.hot_stage_gap": {
+   "v": 0.0,
+   "unit": "m",
+   "est": "ship engine bells nested in booster hot-stage truss at liftoff"
+  },
+  "vehicle.photo.frost_boundary_height": {
+   "v": 45,
+   "unit": "m",
+   "est": "(441-366)*0.61 = 46 m"
+  },
+  "pad.frame": {
+   "v": "origin = Pad 2 (OLP-2) vehicle axis at ground level; x east, y up, z south",
+   "est": "Origin lat 25.99680, lon -97.15804 derived from OSM (centre of the gap between Pad 2 chopstick arm ways). Cross-check: Launch Library alias OLP-2 = 25.99677,-97.15799 https://www.spacelaunchschedule.com/pad/orbital-launch-pad-2-spacex-starbase-tx-usa/ (about 4 m away)."
+  },
+  "pad.origin_lat": {
+   "v": 25.9968,
+   "unit": "deg N",
+   "est": "OSM-derived, +-5 m"
+  },
+  "pad.origin_lon": {
+   "v": -97.15804,
+   "unit": "deg E",
+   "est": "OSM-derived, +-5 m (site.json origin lon -97.15804001)"
+  },
+  "pad.ground_elevation_asl": {
+   "v": 2.5,
+   "unit": "m",
+   "src": "OSM tag ele=2.5 on way 1207227015 Starbase Integration Tower 2"
+  },
+  "pad.pad_id": {
+   "v": "Pad 2 / Pad B / OLP-2 (western pad)",
+   "est": "Photo geometry (tower north of vehicle, camera looks NNE, OSM overlay aligns) plus Flight 14 launched from OLP-2 https://en.wikipedia.org/wiki/Starship_flight_14"
+  },
+  "pad.flight_id": {
+   "v": "Starship Flight 14 (B21/S41), 2026-09-28 12:48:59 UTC = 07:48:59 CDT = 15:48:59 EEST",
+   "est": "Wikipedia flight 14. Photo light comes from the right/rear (sun ESE) = morning; flights 12/13 launched 17:30-17:51 CDT with sun in the west, so they are unlikely. Photo posted 22:30 on 2026-09-28 fits."
+  },
+  "pad.tower2_centre": {
+   "v": [
+    -3,
+    0,
+    -27
+   ],
+   "unit": "m",
+   "src": "OSM way 1207227015 footprint centre in local frame"
+  },
+  "pad.tower2_footprint": {
+   "v": [
+    16,
+    16
+   ],
+   "unit": "m (x,z)",
+   "est": "OSM footprint bbox 16x16 (way 1207227015); photo shows lattice body only ~12-13 m wide aloft, so 16 m probably includes rails/legs"
+  },
+  "pad.tower2_body_width_photo": {
+   "v": 12.5,
+   "unit": "m",
+   "est": "18-20 px wide at ~1.53 px/m in reference.jpeg"
+  },
+  "pad.tower2_height": {
+   "v": 144.5,
+   "unit": "m",
+   "src": "OSM height=144.5 citing FAA OE case 619969843; Fandom OLIT-3 '474 ft (144.5 m)' https://starship-spacex.fandom.com/wiki/Orbital_Launch_and_Integration_Tower_3_(OLIT-3)"
+  },
+  "pad.tower_height_range_faa": {
+   "v": [
+    143,
+    146
+   ],
+   "unit": "m",
+   "src": "FAA structural filings list OLIT units 469-479 ft incl. lightning masts (Fandom OLIT page https://starship-spacex.fandom.com/wiki/Orbital_Launch_and_Integration_Tower_(OLIT)); Wikipedia says 146 m https://en.wikipedia.org/wiki/SpaceX_Starbase. Conflict: 144.5 (pad 2) vs 143 (pad 1, OSM) vs 146 (Wikipedia); chosen 144.5 for pad 2."
+  },
+  "pad.tower_offset_from_axis": {
+   "v": 27.2,
+   "unit": "m",
+   "est": "from OSM tower centre (-3,-27) to axis (0,0); tower is NORTH of the vehicle"
+  },
+  "pad.chopstick_side": {
+   "v": "south (+z) of tower face, i.e. towards the OLM",
+   "est": "OSM gantry ways 1540152640-52 extend from tower face z=-19 to z=+8"
+  },
+  "pad.chopstick_reach_from_tower_face": {
+   "v": 27,
+   "unit": "m",
+   "src": "OSM gantry ways (carriage z -17..-8, arms z -8..+8); crowd-mapped, +-3 m"
+  },
+  "pad.chopstick_arm_length": {
+   "v": 17,
+   "unit": "m",
+   "est": "OSM arm ways ~16 m plus hinge; Pad B arms are 'noticeably shorter' than Pad A: https://spaceexplored.com/2025/07/28/the-key-differences-between-starships-pad-a-and-b/ ; https://www.teslaoracle.com/2025/03/25/spacex-installs-redesigned-chopsticks-pad-b-launch-tower-starship-catch-giga-bay-construction-starbase-updates/"
+  },
+  "pad.chopstick_inner_gap_closed_x": {
+   "v": [
+    -5,
+    7
+   ],
+   "unit": "m",
+   "est": "OSM arm inner edges: 12 m gap for the 9 m booster; arm axis x=+1 before origin shift"
+  },
+  "pad.chopstick_carriage_height_in_photo": {
+   "v": 124,
+   "unit": "m",
+   "est": "crossbar with fork ends at image y~495; tower base row ~685; 1.53 px/m; +-6 m"
+  },
+  "pad.chopstick_open_span_photo": {
+   "v": 44,
+   "unit": "m",
+   "est": "crossbar 782->852 px at 1.53 px/m (arms swung open)"
+  },
+  "pad.qd_arm_boom_height_in_photo": {
+   "v": 65,
+   "unit": "m",
+   "est": "boom with hanging line on west side of tower at image y~585; probable QD/service arm; LOW confidence"
+  },
+  "pad.pad2_booster_QDs": {
+   "v": "dual booster quick disconnects (LCH4 and LOX) on the opposite side of the mount from Pad 1",
+   "src": "NSF Pad 2 advancements article (snippet) https://nasaspaceflight.com/2025/08/starbase-pad-2-advancements-pad-1/"
+  },
+  "pad.lightning_masts": {
+   "v": "on tower top; included in the 143-146 m FAA height",
+   "src": "FAA/Fandom OLIT snippet above"
+  },
+  "pad.olm_centre": {
+   "v": [
+    0,
+    0,
+    0
+   ],
+   "unit": "m",
+   "est": "vehicle axis by definition"
+  },
+  "pad.olm_height": {
+   "v": 20,
+   "unit": "m",
+   "est": "LOW confidence recollection of OLM table height; NSF forum thread 'OLM height and width' https://forum.nasaspaceflight.com/index.php?topic=58105.0 could not be fetched (403)"
+  },
+  "pad.olm_shape_pad2": {
+   "v": "square/'quadratic' water-cooled deck with central circular booster opening; 20 hold-down clamp arms; rolled to Pad B 6 May 2025, lifted onto columns 12 May 2025",
+   "src": "https://spaceexplored.com/2025/07/28/the-key-differences-between-starships-pad-a-and-b/ ; https://starship-spacex.fandom.com/wiki/Pad_B_(Starbase) (search snippets; pages themselves 402/blocked)"
+  },
+  "pad.olm_footprint_pad2": {
+   "v": [
+    34,
+    34
+   ],
+   "unit": "m",
+   "est": "LOW confidence; chopstick outer width ~20 m plus support columns; unsourced"
+  },
+  "pad.olm_mass_pad1": {
+   "v": 370,
+   "unit": "t",
+   "src": "Wikipedia: 370 t launch table https://en.wikipedia.org/wiki/SpaceX_Starbase"
+  },
+  "pad.flame_trench_pad2": {
+   "v": "dedicated bathtub-shaped sheet-pile/CFA-pile reinforced-concrete trench, stainless-lined, water-cooled double-sided flame-bucket diverter beneath the mount",
+   "src": "https://starship-spacex.fandom.com/wiki/Pad_B_(Starbase) (search snippet); https://spaceexplored.com/2025/07/28/the-key-differences-between-starships-pad-a-and-b/"
+  },
+  "pad.flame_trench_pad2_orientation": {
+   "v": "long axis east-west; exhaust splits east and west",
+   "est": "photo: cloud banks left/right, none towards camera; tower north, arms south"
+  },
+  "pad.flame_trench_pad2_size": {
+   "v": [
+    60,
+    25,
+    8
+   ],
+   "unit": "m (length,width,depth)",
+   "est": "LOW confidence; unsourced"
+  },
+  "pad.deluge_runoff_pond_pad2": {
+   "v": {
+    "centre": [
+     -25,
+     0,
+     57
+    ],
+    "note": "basin ~35x30 m"
+   },
+   "unit": "m",
+   "src": "OSM way 1486752424 'Pad-2 Deluge Runoff Pond'"
+  },
+  "pad.pad1_axis": {
+   "v": [
+    359,
+    0,
+    72
+   ],
+   "unit": "m",
+   "est": "OSM tower1 centre (331.5,74.5), arms z 62..82 and x to 368 -> axis 19 m from tower face, same rule as pad 2"
+  },
+  "pad.pad1_tower_centre": {
+   "v": [
+    331.5,
+    0,
+    74.5
+   ],
+   "unit": "m",
+   "src": "OSM way 968227813 (height=143, FAA OE 619974437)"
+  },
+  "pad.pad1_tower_height": {
+   "v": 143,
+   "unit": "m",
+   "src": "OSM height=143; Wikipedia 146 m"
+  },
+  "pad.pad1_chopsticks_side": {
+   "v": "east (+x) of tower",
+   "est": "OSM gantry ways 1529212440-51"
+  },
+  "pad.pad1_offset_from_pad2": {
+   "v": 366,
+   "unit": "m",
+   "est": "sqrt(359^2+72^2)"
+  },
+  "pad.pad1_tower_to_tower": {
+   "v": 350,
+   "unit": "m",
+   "est": "(331.5,74.5) vs (-3,-27)"
+  },
+  "pad.pad1_bearing_from_pad2": {
+   "v": 101,
+   "unit": "deg true",
+   "est": "atan2(east 359, south 72)"
+  },
+  "pad.pad1_status": {
+   "v": "decommissioned 14 Oct 2025 for V3 upgrades (11 launches, 3 booster catches); under reconstruction in 2026",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starbase ; https://en.wikipedia.org/wiki/SpaceX_Starship"
+  },
+  "pad.pad1_mount_shape": {
+   "v": "original circular donut mount with water-cooled steel deluge plate, no flame trench",
+   "src": "https://spaceexplored.com/2025/07/28/the-key-differences-between-starships-pad-a-and-b/ ; OSM shows a 'Flame Trench' polygon at pad 1 (67x77 m centre (366,74), way 1549519359)"
+  },
+  "pad.tank_farm_extent": {
+   "v": "polygon x 145..467, z -110..+24, centroid (352,-28)",
+   "unit": "m",
+   "src": "OSM way 'SpaceX Orbital Launch Pad Tank Farm'"
+  },
+  "pad.tank_farm_pad2_end_centre": {
+   "v": [
+    196,
+    0,
+    -85
+   ],
+   "unit": "m",
+   "src": "OSM 'Pad 2 LOX GSE' 58x42 m; 'Pad 2 CH4 GSE' centre (182,-59) 64x35 m"
+  },
+  "pad.tank_horizontal_lox_ln2": {
+   "v": {
+    "count": 14,
+    "diameter": 5.8,
+    "length": 48.4
+   },
+   "unit": "m",
+   "src": "OSM storage_tank rectangles, LOX/LN2, centres x 219..352, z -52..-29, long axis ~12.5 deg off east-west"
+  },
+  "pad.tank_horizontal_ch4_large": {
+   "v": {
+    "count": 6,
+    "diameter": 6.5,
+    "length": 50.2
+   },
+   "unit": "m",
+   "src": "OSM storage_tank ways at x 358..394, z -26..-21"
+  },
+  "pad.tank_horizontal_ch4_small": {
+   "v": {
+    "count": 2,
+    "diameter": 8.0,
+    "length": 31.3
+   },
+   "unit": "m",
+   "src": "OSM ways x 415-425, z -23"
+  },
+  "pad.tank_water_deluge": {
+   "v": {
+    "count": 13,
+    "diameter": 3.4,
+    "length_m": "26 (x8), 39 (x5)"
+   },
+   "unit": "m",
+   "src": "OSM storage_tank content=water at x 52..98, z -72..-60 (nearest Pad 2)"
+  },
+  "pad.tank_small_vertical": {
+   "v": {
+    "count": 8,
+    "size": 2.7
+   },
+   "unit": "m",
+   "src": "OSM nitrogen/other small tanks"
+  },
+  "pad.vaporizers": {
+   "v": 30,
+   "unit": "count",
+   "src": "OSM name=Vaporizer, ~3x3 m each"
+  },
+  "pad.buildings_pad2": {
+   "v": {
+    "Pad 2 Power & Comms": [
+     81,
+     -134
+    ],
+    "Gas generators": [
+     91,
+     -86
+    ],
+    "Control Center": [
+     58,
+     -124
+    ],
+    "Megabunker": [
+     133,
+     -121
+    ],
+    "Power Bunker": [
+     233,
+     -102
+    ],
+    "CH4 Reclaim": [
+     178,
+     -39
+    ],
+    "Starhopper": [
+     67,
+     -197
+    ]
+   },
+   "unit": "m (x,z)",
+   "src": "OSM named buildings"
+  },
+  "pad.coast_distance_east": {
+   "v": 750,
+   "unit": "m",
+   "src": "OSM natural=coastline ways 1230230739/975/976 at x~+750 near pad latitude"
+  },
+  "pad.coast_bearing": {
+   "v": "NNW-SSE, about 6 deg east of south going south",
+   "src": "OSM coastline geometry"
+  },
+  "pad.camera_position": {
+   "v": [
+    -308,
+    105,
+    634
+   ],
+   "unit": "m",
+   "est": "camera-estimate.md; lat 25.99108, lon -97.16112"
+  },
+  "pad.camera_heading_pitch_roll": {
+   "v": [
+    26.8,
+    2.7,
+    0.2
+   ],
+   "unit": "deg",
+   "est": "camera-estimate.md"
+  },
+  "pad.camera_focal_px_hfov": {
+   "v": [
+    1133,
+    73
+   ],
+   "unit": "px, deg",
+   "est": "camera-estimate.md"
+  },
+  "physics.booster_height_m": {
+   "v": 72.3,
+   "unit": "m",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy ; https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+  },
+  "physics.stack_height_m": {
+   "v": 124.4,
+   "unit": "m",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship ; https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+  },
+  "physics.ship_height_m": {
+   "v": 52.1,
+   "unit": "m",
+   "est": "stack minus booster; SFN F14 says 52 m https://spaceflightnow.com/2026/09/21/spacexs-super-heavy-booster-arrives-at-pad-ahead-of-first-orbital-starship-launch/ ; W-SS table lists 61 m (rejected)"
+  },
+  "physics.diameter_m": {
+   "v": 9,
+   "unit": "m",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship"
+  },
+  "physics.booster_engines": {
+   "v": 33,
+   "unit": "count",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "physics.ship_engines": {
+   "v": 6,
+   "unit": "count (3 SL + 3 RVac)",
+   "src": "https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+  },
+  "physics.booster_prop_mass_b3_t": {
+   "v": 3650,
+   "unit": "t",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "physics.booster_prop_mass_b2_t": {
+   "v": 3400,
+   "unit": "t",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "physics.booster_dry_mass_b2_t": {
+   "v": 275,
+   "unit": "t",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "physics.booster_dry_mass_b3_t": {
+   "v": 285,
+   "unit": "t",
+   "est": "not published; assume near Block 2 275 t, +10 t"
+  },
+  "physics.ship_prop_mass_b3_t": {
+   "v": 1600,
+   "unit": "t",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starship"
+  },
+  "physics.ship_dry_mass_b3_t": {
+   "v": 120,
+   "unit": "t",
+   "est": "not found; Block 2 = 85 t (W-SS), V3 heavier, range 100-130"
+  },
+  "physics.payload_mass_f14_t": {
+   "v": 44,
+   "unit": "t",
+   "est": "26 Starlink V3 sats x ~1.7 t (F13: 20 sats = 34.1 t, https://en.wikipedia.org/wiki/Starship_flight_test_13)"
+  },
+  "physics.liftoff_mass_published_t": {
+   "v": 5300,
+   "unit": "t",
+   "src": "https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+  },
+  "physics.liftoff_mass_sum_of_parts_t": {
+   "v": 5700,
+   "unit": "t",
+   "est": "285+3650+120+1600+44; conflicts with published 5300"
+  },
+  "physics.liftoff_mass_used_t": {
+   "v": 5400,
+   "unit": "t",
+   "est": "midpoint chosen for the integrator; range 5300-5650"
+  },
+  "physics.liftoff_thrust_b3_MN": {
+   "v": 80.8,
+   "unit": "MN",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "physics.liftoff_thrust_b3_Mlbf": {
+   "v": 18.2,
+   "unit": "Mlbf",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "physics.liftoff_thrust_b2_MN": {
+   "v": 73.5,
+   "unit": "MN",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "physics.liftoff_thrust_alt_280tf_MN": {
+   "v": 90.6,
+   "unit": "MN",
+   "est": "33 x 280 tf x 9.80665; press claim in https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/ (rejected)"
+  },
+  "physics.liftoff_tw_central": {
+   "v": 1.53,
+   "unit": "ratio",
+   "est": "80.8e6/(5.4e6*9.80665)"
+  },
+  "physics.liftoff_tw_range_low": {
+   "v": 1.46,
+   "unit": "ratio",
+   "est": "5650 t"
+  },
+  "physics.liftoff_tw_range_high": {
+   "v": 1.55,
+   "unit": "ratio",
+   "est": "5300 t"
+  },
+  "physics.raptor2_thrust_sl_tf": {
+   "v": 230,
+   "unit": "tf",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+  },
+  "physics.raptor2_thrust_sl_kN": {
+   "v": 2256,
+   "unit": "kN",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+  },
+  "physics.raptor2_chamber_pressure_bar": {
+   "v": 300,
+   "unit": "bar",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+  },
+  "physics.raptor2_isp_sl_s": {
+   "v": 347,
+   "unit": "s (W-RAP; W-SH gives 327 for Block 1/2)",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+  },
+  "physics.raptor2_engine_mass_kg": {
+   "v": 1630,
+   "unit": "kg",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+  },
+  "physics.raptor3_thrust_sl_tf": {
+   "v": 250,
+   "unit": "tf",
+   "src": "https://spaceflightnow.com/2026/05/12/spacex-targets-may-19-for-debut-of-starship-super-heavy-version-3-launch-pad-2/ ; https://en.wikipedia.org/wiki/SpaceX_Raptor"
+  },
+  "physics.raptor3_thrust_sl_kN": {
+   "v": 2452,
+   "unit": "kN",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+  },
+  "physics.raptor3_thrust_sl_alt_tf": {
+   "v": 280,
+   "unit": "tf (press/Musk target, rejected)",
+   "src": "https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+  },
+  "physics.raptor3_thrust_vac_tf": {
+   "v": 275,
+   "unit": "tf",
+   "src": "https://spaceflightnow.com/2026/05/12/spacex-targets-may-19-for-debut-of-starship-super-heavy-version-3-launch-pad-2/"
+  },
+  "physics.raptor3_chamber_pressure_bar": {
+   "v": 330,
+   "unit": "bar",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor (350 bar in https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/)"
+  },
+  "physics.raptor3_chamber_pressure_alt_bar": {
+   "v": 350,
+   "unit": "bar (alt)",
+   "src": "https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+  },
+  "physics.raptor3_engine_mass_kg": {
+   "v": 1525,
+   "unit": "kg",
+   "src": "https://spaceflightnow.com/2026/05/12/spacex-targets-may-19-for-debut-of-starship-super-heavy-version-3-launch-pad-2/"
+  },
+  "physics.raptor_of_ratio": {
+   "v": 3.6,
+   "unit": "mass ratio",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+  },
+  "physics.raptor3_isp_sl_used_s": {
+   "v": 330,
+   "unit": "s",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (Block 3 sea-level Isp); W-RAP Raptor 3 row says 350 (conflict)"
+  },
+  "physics.raptor3_isp_vac_s": {
+   "v": 350,
+   "unit": "s",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor ; est 348 from Ae*p0 in physics.md"
+  },
+  "physics.raptor_nozzle_exit_diameter_m": {
+   "v": 1.2,
+   "unit": "m",
+   "est": "Unified with vehicle.raptor3.nozzle_exit_diameter_sl (packing constraint)"
+  },
+  "physics.raptor_nozzle_exit_area_m2": {
+   "v": 1.131,
+   "unit": "m2",
+   "est": "pi/4 * 1.2^2"
+  },
+  "physics.raptor_nozzle_expansion_ratio": {
+   "v": 34.34,
+   "unit": "ratio",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor (Raptor 1)"
+  },
+  "physics.raptor_chamber_temperature_K": {
+   "v": 3600,
+   "unit": "K",
+   "est": "methalox adiabatic flame temp at O/F 3.6, general knowledge, not fetched"
+  },
+  "physics.raptor_exit_static_temperature_K": {
+   "v": 1300,
+   "unit": "K",
+   "est": "isentropic, gamma 1.15-1.25 gives 1050-1700 K"
+  },
+  "physics.raptor_exit_pressure_bar": {
+   "v": 0.77,
+   "unit": "bar",
+   "est": "isentropic gamma 1.2, Pc 300 bar, eps 34; range 0.64-0.93"
+  },
+  "physics.raptor_exhaust_velocity_sl_mps": {
+   "v": 3236,
+   "unit": "m/s",
+   "est": "330*9.80665"
+  },
+  "physics.mdot_booster_total_kgps": {
+   "v": 24968,
+   "unit": "kg/s",
+   "est": "F_SL/(Isp g0)"
+  },
+  "physics.mdot_per_engine_kgps": {
+   "v": 757,
+   "unit": "kg/s",
+   "est": "24968/33; 714 if Isp 350"
+  },
+  "physics.mdot_lox_total_kgps": {
+   "v": 19540,
+   "unit": "kg/s",
+   "est": "mdot*3.6/4.6"
+  },
+  "physics.mdot_ch4_total_kgps": {
+   "v": 5428,
+   "unit": "kg/s",
+   "est": "mdot/4.6"
+  },
+  "physics.booster_full_thrust_burn_time_s": {
+   "v": 146,
+   "unit": "s",
+   "est": "3650 t / mdot"
+  },
+  "physics.jet_mechanical_power_GW": {
+   "v": 131,
+   "unit": "GW",
+   "est": "0.5*F*ve"
+  },
+  "physics.chemical_power_GW": {
+   "v": 271,
+   "unit": "GW",
+   "est": "5.43 t/s CH4 x 50 MJ/kg"
+  },
+  "physics.vac_thrust_booster_MN": {
+   "v": 84.6,
+   "unit": "MN",
+   "est": "F_SL + p0 * A_e with 33 x 1.131 m2 exit area (1.2 m nozzles): 80.8 + 3.78 MN"
+  },
+  "physics.thrust_gain_150m_pct": {
+   "v": 0.1,
+   "unit": "%",
+   "est": "(101325-99530)*43.8/80.8e6"
+  },
+  "physics.engine_start_lead_s": {
+   "v": 3,
+   "unit": "s before liftoff",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+  },
+  "physics.engine_start_note": {
+   "v": "ignition T-3 s, ramp ~2.5-3 s, release at ~full thrust at T+0",
+   "unit": "text",
+   "est": "W-SH gives only the 3 s lead"
+  },
+  "physics.tower_height_pad2_m": {
+   "v": 144.5,
+   "unit": "m",
+   "src": "https://starship-spacex.fandom.com/wiki/Orbital_Launch_and_Integration_Tower_(OLIT) via search summary (474 ft)"
+  },
+  "physics.tower_height_pad1_m": {
+   "v": 146,
+   "unit": "m",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starbase (FAA DNH Mar 2021)"
+  },
+  "physics.tower_height_used_m": {
+   "v": 145,
+   "unit": "m",
+   "est": "verified within +-2 m across sources; includes mast, measured from ground"
+  },
+  "physics.olm_height_m": {
+   "v": 20,
+   "unit": "m",
+   "est": "not found in a source; range 15-25 m"
+  },
+  "physics.base_rise_to_tower_top_m": {
+   "v": 125,
+   "unit": "m",
+   "est": "145-20"
+  },
+  "physics.t_base_at_tower_top_s": {
+   "v": 6.86,
+   "unit": "s",
+   "est": "integrator, M0 5400 t, s=125 m; range 6.7-7.3 (s=145: 7.4)"
+  },
+  "physics.v_base_at_tower_top_mps": {
+   "v": 37.0,
+   "unit": "m/s",
+   "est": "integrator"
+  },
+  "physics.a_net_at_tower_top_mps2": {
+   "v": 5.66,
+   "unit": "m/s2",
+   "est": "integrator; proper accel 1.58 g"
+  },
+  "physics.photo_time_estimate_s": {
+   "v": "7-8",
+   "unit": "s after liftoff",
+   "est": "booster base ~10-15 m above tower top in reference image, by eye"
+  },
+  "physics.max_q_time_f14_s": {
+   "v": 58,
+   "unit": "s",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+  },
+  "physics.meco_time_f14_s": {
+   "v": 140,
+   "unit": "s",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+  },
+  "physics.hot_staging_time_f14_s": {
+   "v": 142,
+   "unit": "s",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+  },
+  "physics.max_q_model_kPa": {
+   "v": 30,
+   "unit": "kPa",
+   "est": "2-D model"
+  },
+  "physics.meco_alt_est_km": {
+   "v": 60,
+   "unit": "km",
+   "est": "model 55 km; recalled HUD 65-70 km (unverified); range 55-70"
+  },
+  "physics.meco_speed_est_mps": {
+   "v": 1725,
+   "unit": "m/s",
+   "est": "model; recalled HUD ~1.6-1.8 km/s"
+  },
+  "physics.deluge_water_pad1_gal": {
+   "v": 350000,
+   "unit": "US gal",
+   "src": "https://interestingengineering.com/innovation/spacex-starship-water-deluge-system ; https://gizmodo.com/spacex-starship-rocket-artemis-mechazilla-launch-guide-1850249132"
+  },
+  "physics.deluge_water_pad1_kg": {
+   "v": 1325000.0,
+   "unit": "kg",
+   "est": "350000*3.785"
+  },
+  "physics.deluge_vaporised_fraction": {
+   "v": 0.9,
+   "unit": "fraction (>90%)",
+   "src": "https://www.faa.gov/media/72826 via search summary; unverified"
+  },
+  "physics.deluge_pad2_test_flow_gpm": {
+   "v": 650000,
+   "unit": "US gal/min",
+   "src": "https://www.basenor.com/blogs/news/spacex-tests-starship-pad-2-flame-deflector-at-650-000-gpm (cites third-party X post; low reliability)"
+  },
+  "physics.deluge_pad2_test_flow_m3ps": {
+   "v": 41,
+   "unit": "m3/s",
+   "est": "650000*3.785e-3/60"
+  },
+  "physics.launch_table_mass_pad1_t": {
+   "v": 370,
+   "unit": "t",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Starbase"
+  },
+  "physics.deluge_vaporisation_energy_J": {
+   "v": 3400000000000.0,
+   "unit": "J",
+   "est": "1.325e6 kg x 2.6 MJ/kg"
+  },
+  "physics.combustion_h2o_tps": {
+   "v": 11,
+   "unit": "t/s",
+   "est": "upper bound, full oxidation of 19.5 t/s LOX"
+  },
+  "physics.combustion_co2_tps": {
+   "v": 13.4,
+   "unit": "t/s",
+   "est": "upper bound"
+  },
+  "physics.sound_speed_25C_mps": {
+   "v": 346,
+   "unit": "m/s",
+   "est": "331.3*sqrt(1+25/273.15)"
+  },
+  "physics.sound_speed_15C_mps": {
+   "v": 340,
+   "unit": "m/s",
+   "est": "ISA"
+  },
+  "physics.acoustic_eff_central": {
+   "v": 0.005,
+   "unit": "fraction",
+   "est": "0.2-1% rule of thumb (NASA SP-8072, recalled, not fetched)"
+  },
+  "physics.sound_power_level_dB": {
+   "v": 208,
+   "unit": "dB re 1 pW",
+   "est": "10log10(0.005*1.31e11/1e-12); range 204-211"
+  },
+  "physics.spl_100m_dB": {
+   "v": 160,
+   "unit": "dB",
+   "est": "Lw-20log r-8, free field, no deluge; overpredicts far field"
+  },
+  "physics.spl_1km_dB": {
+   "v": 140,
+   "unit": "dB",
+   "est": "same model"
+  },
+  "physics.spl_10km_measured_dB": {
+   "v": 105,
+   "unit": "dB",
+   "src": "https://old-man-par.com/2024/12/11/starship-measured-at-ten-times-falcon-9-sound-level/ (Gee et al., JASA-EL Nov 2024; Port Isabel 6.2 mi)"
+  },
+  "physics.spl_20km_measured_dB": {
+   "v": 90,
+   "unit": "dB",
+   "src": "same (Laguna Vista 12.4 mi)"
+  },
+  "physics.near_field_dB": {
+   "v": 200,
+   "unit": "dB",
+   "src": "https://en.wikipedia.org/wiki/Sound_suppression_system ('approaching 200 dB' at launch pads)"
+  },
+  "physics.faa_lmax_contour_dB": {
+   "v": 134,
+   "unit": "dB",
+   "src": "https://www.faa.gov/media/72826 via search summary; contour within Starbase property"
+  },
+  "physics.sound_front_radius_at_photo_m": {
+   "v": 3800,
+   "unit": "m",
+   "est": "346 m/s x (T+7.5 + 3) s from ignition"
+  },
+  "physics.plume_radiant_flux_100m_kWm2": {
+   "v": 40,
+   "unit": "kW/m2",
+   "est": "order of magnitude: eps 0.2, T 2500 K, view factor 0.1"
+  },
+  "physics.plume_radiant_flux_1km_kWm2": {
+   "v": 0.4,
+   "unit": "kW/m2",
+   "est": "order of magnitude"
+  },
+  "physics.raptor_exit_mach": {
+   "v": 4.1,
+   "unit": "Mach",
+   "est": "isentropic gamma 1.2, expansion ratio 34"
+  },
+  "physics.flight14_liftoff_utc": {
+   "v": "2026-09-28T12:48:59Z",
+   "unit": "ISO",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+  },
+  "physics.flight13_liftoff_utc": {
+   "v": "2026-07-24T22:51:00Z",
+   "unit": "ISO",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_13"
+  },
+  "physics.flight12_liftoff_utc": {
+   "v": "2026-05-22T22:30:22Z",
+   "unit": "ISO",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_12"
+  },
+  "vehicle.raptor3.thrust_sl": {
+   "v": 250,
+   "unit": "tf",
+   "src": "https://en.wikipedia.org/wiki/SpaceX_Raptor ; consistent with 80.8 MN total (33 x 250 tf). 280 tf press figure rejected (see physics.md)"
+  },
+  "scene.sun_altitude": {
+   "v": 5.7,
+   "unit": "deg",
+   "est": "Computed solar position (low-precision almanac) for lat 25.9968, lon -97.15804 at 2026-09-28 12:48:59 UTC: alt 5.73 deg, az 95.2 deg. Researcher values of 8 and 19 deg rejected."
+  },
+  "scene.sun_azimuth": {
+   "v": 95.2,
+   "unit": "deg true",
+   "est": "same computation"
+  },
+  "scene.vehicle_base_height": {
+   "v": 158,
+   "unit": "m above ground",
+   "est": "Photo: booster base row 441 vs tower top row 465 (tower 144.5 m) with camera 105 m up at ~705 m: atan geometry gives ~158 m. R2 got 160, R1 got 140 (assumed a lower camera)."
+  },
+  "scene.t_freeze": {
+   "v": 7.2,
+   "unit": "s after liftoff",
+   "est": "Liftoff integrator: base climbs from OLM deck (~20 m est) to 158 m at ~T+7.2 s (5400 t, 80.8 MN). Physics module recomputes; the test asserts consistency."
+  },
+  "scene.camera.pos": {
+   "v": [
+    -308,
+    105,
+    634
+   ],
+   "unit": "m",
+   "est": "research/camera-estimate.md, OSM overlay reprojection within 20-30 px"
+  },
+  "scene.camera.heading": {
+   "v": 26.8,
+   "unit": "deg true",
+   "est": "camera-estimate.md"
+  },
+  "scene.camera.pitch": {
+   "v": 2.7,
+   "unit": "deg",
+   "est": "camera-estimate.md"
+  },
+  "scene.camera.roll": {
+   "v": 0.2,
+   "unit": "deg",
+   "est": "camera-estimate.md"
+  },
+  "scene.camera.vfov": {
+   "v": 45.2,
+   "unit": "deg",
+   "est": "f = 1133 px on a 943 px tall frame -> 2*atan(471.5/1133). HFOV 73 deg. +-25% (trades off against distance)."
+  },
+  "scene.camera.aspect": {
+   "v": 1.7784,
+   "unit": "",
+   "src": "reference.jpeg 1677x943"
+  },
+  "scene.olm_deck_height": {
+   "v": 20,
+   "unit": "m",
+   "est": "Low-confidence recollection (NSF forum not reachable); used for the vehicle's rest height and the OLM model"
+  },
+  "scene.trench_axis": {
+   "v": "bearing 123 / 303 deg (ESE-WNW), world direction (0.838, 0, 0.546)",
+   "unit": "",
+   "src": "OSM way tagged construction:aeroway=flame_trench (about 84 x 18 m, rotated about 33 deg, the same rotation as the tower footprints); consistent with the symmetric left/right cloud banks in the photo (camera right = bearing 116.8 deg)"
+  },
+  "scene.volume_bounds_min": {
+   "v": [
+    -750,
+    0,
+    -450
+   ],
+   "unit": "m",
+   "est": "Launch-cloud domain enclosing both photo cloud masses (E and W along the trench axis) plus the rising billows"
+  },
+  "scene.volume_bounds_max": {
+   "v": [
+    750,
+    480,
+    420
+   ],
+   "unit": "m",
+   "est": "z raised to 420 so the ground roll in front of the east bank can reach toward the camera (volume builder request)"
+  },
+  "scene.vehicle_tilt": {
+   "v": 2.2,
+   "unit": "deg",
+   "est": "Photo: nose tip x=826 vs engine plane x=818 over 208 px, with the camera roll at 0.2 deg. The stack leans about 2.2 deg toward the camera's right (ESE), away from the tower."
+  },
+  "scene.trench_yaw": {
+   "v": -33.1,
+   "unit": "deg (three.js rotation.y)",
+   "src": "atan2(0.546, 0.838) from the OSM trench polygon; rotation.y = -33.1 deg maps local +x onto the trench axis"
+  }
+ }
+}

@@ -1,0 +1,43 @@
+/* Shared design tokens for every DOM overlay (UI shell, lens panel, education mode). OWNER: orchestrator.
+   Dark "cinematic glass" UI floating over the 3D view. Import once in main.ts; modules may assume it. */
+:root {
+  --ui-font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --ui-font-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace;
+  --ui-fg: #eef2f6;
+  --ui-muted: #a7b1bd;
+  --ui-faint: #6f7a87;
+  --ui-bg: rgba(12, 15, 20, 0.62);
+  --ui-bg-strong: rgba(10, 12, 16, 0.86);
+  --ui-border: rgba(255, 255, 255, 0.12);
+  --ui-hover: rgba(255, 255, 255, 0.08);
+  --ui-accent: #ff9a3c;        /* plume orange */
+  --ui-accent-2: #6cc3ff;      /* sky blue */
+  --ui-ok: #5fd08b;            /* "sourced" badge */
+  --ui-warn: #f2c14e;          /* "estimate" badge */
+  --ui-danger: #ff6b6b;
+  --ui-radius: 12px;
+  --ui-radius-sm: 8px;
+  --ui-gap: 8px;
+  --ui-pad: 12px;
+  --ui-blur: 14px;
+  --ui-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --ui-z-hud: 10;
+  --ui-z-panel: 20;
+  --ui-z-modal: 40;
+  --ui-z-loading: 100;
+  --ui-t-fast: 120ms;
+  --ui-t: 220ms;
+  --ui-safe-top: env(safe-area-inset-top, 0px);
+  --ui-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+.ui-glass {
+  background: var(--ui-bg);
+  -webkit-backdrop-filter: blur(var(--ui-blur)) saturate(1.2);
+  backdrop-filter: blur(var(--ui-blur)) saturate(1.2);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  box-shadow: var(--ui-shadow);
+  color: var(--ui-fg);
+  font-family: var(--ui-font);
+}
+@media (prefers-reduced-motion: reduce) { :root { --ui-t-fast: 0ms; --ui-t: 0ms; } }

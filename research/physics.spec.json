@@ -1,0 +1,590 @@
+{
+ "booster_height_m": {
+  "value": 72.3,
+  "unit": "m",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy ; https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+ },
+ "stack_height_m": {
+  "value": 124.4,
+  "unit": "m",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Starship ; https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+ },
+ "ship_height_m": {
+  "value": 52.1,
+  "unit": "m",
+  "prov": "est",
+  "ref": "stack minus booster; SFN F14 says 52 m https://spaceflightnow.com/2026/09/21/spacexs-super-heavy-booster-arrives-at-pad-ahead-of-first-orbital-starship-launch/ ; W-SS table lists 61 m (rejected)"
+ },
+ "diameter_m": {
+  "value": 9,
+  "unit": "m",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Starship"
+ },
+ "booster_engines": {
+  "value": 33,
+  "unit": "count",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+ },
+ "ship_engines": {
+  "value": 6,
+  "unit": "count (3 SL + 3 RVac)",
+  "prov": "src",
+  "ref": "https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+ },
+ "booster_prop_mass_b3_t": {
+  "value": 3650,
+  "unit": "t",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+ },
+ "booster_prop_mass_b2_t": {
+  "value": 3400,
+  "unit": "t",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+ },
+ "booster_dry_mass_b2_t": {
+  "value": 275,
+  "unit": "t",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+ },
+ "booster_dry_mass_b3_t": {
+  "value": 285,
+  "unit": "t",
+  "prov": "est",
+  "ref": "not published; assume near Block 2 275 t, +10 t"
+ },
+ "ship_prop_mass_b3_t": {
+  "value": 1600,
+  "unit": "t",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Starship"
+ },
+ "ship_dry_mass_b3_t": {
+  "value": 120,
+  "unit": "t",
+  "prov": "est",
+  "ref": "not found; Block 2 = 85 t (W-SS), V3 heavier, range 100-130"
+ },
+ "payload_mass_f14_t": {
+  "value": 44,
+  "unit": "t",
+  "prov": "est",
+  "ref": "26 Starlink V3 sats x ~1.7 t (F13: 20 sats = 34.1 t, https://en.wikipedia.org/wiki/Starship_flight_test_13)"
+ },
+ "liftoff_mass_published_t": {
+  "value": 5300,
+  "unit": "t",
+  "prov": "src",
+  "ref": "https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+ },
+ "liftoff_mass_sum_of_parts_t": {
+  "value": 5700,
+  "unit": "t",
+  "prov": "est",
+  "ref": "285+3650+120+1600+44; conflicts with published 5300"
+ },
+ "liftoff_mass_used_t": {
+  "value": 5400,
+  "unit": "t",
+  "prov": "est",
+  "ref": "midpoint chosen for the integrator; range 5300-5650"
+ },
+ "liftoff_thrust_b3_MN": {
+  "value": 80.8,
+  "unit": "MN",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+ },
+ "liftoff_thrust_b3_Mlbf": {
+  "value": 18.2,
+  "unit": "Mlbf",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+ },
+ "liftoff_thrust_b2_MN": {
+  "value": 73.5,
+  "unit": "MN",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+ },
+ "liftoff_thrust_alt_280tf_MN": {
+  "value": 90.6,
+  "unit": "MN",
+  "prov": "est",
+  "ref": "33 x 280 tf x 9.80665; press claim in https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/ (rejected)"
+ },
+ "liftoff_tw_central": {
+  "value": 1.53,
+  "unit": "ratio",
+  "prov": "est",
+  "ref": "80.8e6/(5.4e6*9.80665)"
+ },
+ "liftoff_tw_range_low": {
+  "value": 1.46,
+  "unit": "ratio",
+  "prov": "est",
+  "ref": "5650 t"
+ },
+ "liftoff_tw_range_high": {
+  "value": 1.55,
+  "unit": "ratio",
+  "prov": "est",
+  "ref": "5300 t"
+ },
+ "raptor2_thrust_sl_tf": {
+  "value": 230,
+  "unit": "tf",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+ },
+ "raptor2_thrust_sl_kN": {
+  "value": 2256,
+  "unit": "kN",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+ },
+ "raptor2_chamber_pressure_bar": {
+  "value": 300,
+  "unit": "bar",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+ },
+ "raptor2_isp_sl_s": {
+  "value": 347,
+  "unit": "s (W-RAP; W-SH gives 327 for Block 1/2)",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+ },
+ "raptor2_engine_mass_kg": {
+  "value": 1630,
+  "unit": "kg",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+ },
+ "raptor3_thrust_sl_tf": {
+  "value": 250,
+  "unit": "tf",
+  "prov": "src",
+  "ref": "https://spaceflightnow.com/2026/05/12/spacex-targets-may-19-for-debut-of-starship-super-heavy-version-3-launch-pad-2/ ; https://en.wikipedia.org/wiki/SpaceX_Raptor"
+ },
+ "raptor3_thrust_sl_kN": {
+  "value": 2452,
+  "unit": "kN",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+ },
+ "raptor3_thrust_sl_alt_tf": {
+  "value": 280,
+  "unit": "tf (press/Musk target, rejected)",
+  "prov": "src",
+  "ref": "https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+ },
+ "raptor3_thrust_vac_tf": {
+  "value": 275,
+  "unit": "tf",
+  "prov": "src",
+  "ref": "https://spaceflightnow.com/2026/05/12/spacex-targets-may-19-for-debut-of-starship-super-heavy-version-3-launch-pad-2/"
+ },
+ "raptor3_chamber_pressure_bar": {
+  "value": 330,
+  "unit": "bar",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Raptor (350 bar in https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/)"
+ },
+ "raptor3_chamber_pressure_alt_bar": {
+  "value": 350,
+  "unit": "bar (alt)",
+  "prov": "src",
+  "ref": "https://newspaceeconomy.ca/2026/04/16/detailed-review-of-starship-v3/"
+ },
+ "raptor3_engine_mass_kg": {
+  "value": 1525,
+  "unit": "kg",
+  "prov": "src",
+  "ref": "https://spaceflightnow.com/2026/05/12/spacex-targets-may-19-for-debut-of-starship-super-heavy-version-3-launch-pad-2/"
+ },
+ "raptor_of_ratio": {
+  "value": 3.6,
+  "unit": "mass ratio",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Raptor"
+ },
+ "raptor3_isp_sl_used_s": {
+  "value": 330,
+  "unit": "s",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy (Block 3 sea-level Isp); W-RAP Raptor 3 row says 350 (conflict)"
+ },
+ "raptor3_isp_vac_s": {
+  "value": 350,
+  "unit": "s",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Raptor ; est 348 from Ae*p0 in physics.md"
+ },
+ "raptor_nozzle_exit_diameter_m": {
+  "value": 1.3,
+  "unit": "m",
+  "prov": "est",
+  "ref": "Raptor 1 SL nozzle; assumed unchanged"
+ },
+ "raptor_nozzle_exit_area_m2": {
+  "value": 1.327,
+  "unit": "m2",
+  "prov": "est",
+  "ref": "pi*(1.3/2)^2"
+ },
+ "raptor_nozzle_expansion_ratio": {
+  "value": 34.34,
+  "unit": "ratio",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Raptor (Raptor 1)"
+ },
+ "raptor_chamber_temperature_K": {
+  "value": 3600,
+  "unit": "K",
+  "prov": "est",
+  "ref": "methalox adiabatic flame temp at O/F 3.6, general knowledge, not fetched"
+ },
+ "raptor_exit_static_temperature_K": {
+  "value": 1300,
+  "unit": "K",
+  "prov": "est",
+  "ref": "isentropic, gamma 1.15-1.25 gives 1050-1700 K"
+ },
+ "raptor_exit_pressure_bar": {
+  "value": 0.77,
+  "unit": "bar",
+  "prov": "est",
+  "ref": "isentropic gamma 1.2, Pc 300 bar, eps 34; range 0.64-0.93"
+ },
+ "raptor_exhaust_velocity_sl_mps": {
+  "value": 3236,
+  "unit": "m/s",
+  "prov": "est",
+  "ref": "330*9.80665"
+ },
+ "mdot_booster_total_kgps": {
+  "value": 24968,
+  "unit": "kg/s",
+  "prov": "est",
+  "ref": "F_SL/(Isp g0)"
+ },
+ "mdot_per_engine_kgps": {
+  "value": 757,
+  "unit": "kg/s",
+  "prov": "est",
+  "ref": "24968/33; 714 if Isp 350"
+ },
+ "mdot_lox_total_kgps": {
+  "value": 19540,
+  "unit": "kg/s",
+  "prov": "est",
+  "ref": "mdot*3.6/4.6"
+ },
+ "mdot_ch4_total_kgps": {
+  "value": 5428,
+  "unit": "kg/s",
+  "prov": "est",
+  "ref": "mdot/4.6"
+ },
+ "booster_full_thrust_burn_time_s": {
+  "value": 146,
+  "unit": "s",
+  "prov": "est",
+  "ref": "3650 t / mdot"
+ },
+ "jet_mechanical_power_GW": {
+  "value": 131,
+  "unit": "GW",
+  "prov": "est",
+  "ref": "0.5*F*ve"
+ },
+ "chemical_power_GW": {
+  "value": 271,
+  "unit": "GW",
+  "prov": "est",
+  "ref": "5.43 t/s CH4 x 50 MJ/kg"
+ },
+ "vac_thrust_booster_MN": {
+  "value": 85.2,
+  "unit": "MN",
+  "prov": "est",
+  "ref": "F_SL + 33*p0*Ae"
+ },
+ "thrust_gain_150m_pct": {
+  "value": 0.1,
+  "unit": "%",
+  "prov": "est",
+  "ref": "(101325-99530)*43.8/80.8e6"
+ },
+ "engine_start_lead_s": {
+  "value": 3,
+  "unit": "s before liftoff",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Super_Heavy"
+ },
+ "engine_start_note": {
+  "value": "ignition T-3 s, ramp ~2.5-3 s, release at ~full thrust at T+0",
+  "unit": "text",
+  "prov": "est",
+  "ref": "W-SH gives only the 3 s lead"
+ },
+ "tower_height_pad2_m": {
+  "value": 144.5,
+  "unit": "m",
+  "prov": "src",
+  "ref": "https://starship-spacex.fandom.com/wiki/Orbital_Launch_and_Integration_Tower_(OLIT) via search summary (474 ft)"
+ },
+ "tower_height_pad1_m": {
+  "value": 146,
+  "unit": "m",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Starbase (FAA DNH Mar 2021)"
+ },
+ "tower_height_used_m": {
+  "value": 145,
+  "unit": "m",
+  "prov": "est",
+  "ref": "verified within +-2 m across sources; includes mast, measured from ground"
+ },
+ "olm_height_m": {
+  "value": 20,
+  "unit": "m",
+  "prov": "est",
+  "ref": "not found in a source; range 15-25 m"
+ },
+ "base_rise_to_tower_top_m": {
+  "value": 125,
+  "unit": "m",
+  "prov": "est",
+  "ref": "145-20"
+ },
+ "t_base_at_tower_top_s": {
+  "value": 6.86,
+  "unit": "s",
+  "prov": "est",
+  "ref": "integrator, M0 5400 t, s=125 m; range 6.7-7.3 (s=145: 7.4)"
+ },
+ "v_base_at_tower_top_mps": {
+  "value": 37.0,
+  "unit": "m/s",
+  "prov": "est",
+  "ref": "integrator"
+ },
+ "a_net_at_tower_top_mps2": {
+  "value": 5.66,
+  "unit": "m/s2",
+  "prov": "est",
+  "ref": "integrator; proper accel 1.58 g"
+ },
+ "photo_time_estimate_s": {
+  "value": "7-8",
+  "unit": "s after liftoff",
+  "prov": "est",
+  "ref": "booster base ~10-15 m above tower top in reference image, by eye"
+ },
+ "max_q_time_f14_s": {
+  "value": 58,
+  "unit": "s",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+ },
+ "meco_time_f14_s": {
+  "value": 140,
+  "unit": "s",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+ },
+ "hot_staging_time_f14_s": {
+  "value": 142,
+  "unit": "s",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+ },
+ "max_q_model_kPa": {
+  "value": 30,
+  "unit": "kPa",
+  "prov": "est",
+  "ref": "2-D model"
+ },
+ "meco_alt_est_km": {
+  "value": 60,
+  "unit": "km",
+  "prov": "est",
+  "ref": "model 55 km; recalled HUD 65-70 km (unverified); range 55-70"
+ },
+ "meco_speed_est_mps": {
+  "value": 1725,
+  "unit": "m/s",
+  "prov": "est",
+  "ref": "model; recalled HUD ~1.6-1.8 km/s"
+ },
+ "deluge_water_pad1_gal": {
+  "value": 350000,
+  "unit": "US gal",
+  "prov": "src",
+  "ref": "https://interestingengineering.com/innovation/spacex-starship-water-deluge-system ; https://gizmodo.com/spacex-starship-rocket-artemis-mechazilla-launch-guide-1850249132"
+ },
+ "deluge_water_pad1_kg": {
+  "value": 1325000.0,
+  "unit": "kg",
+  "prov": "est",
+  "ref": "350000*3.785"
+ },
+ "deluge_vaporised_fraction": {
+  "value": 0.9,
+  "unit": "fraction (>90%)",
+  "prov": "src",
+  "ref": "https://www.faa.gov/media/72826 via search summary; unverified"
+ },
+ "deluge_pad2_test_flow_gpm": {
+  "value": 650000,
+  "unit": "US gal/min",
+  "prov": "src",
+  "ref": "https://www.basenor.com/blogs/news/spacex-tests-starship-pad-2-flame-deflector-at-650-000-gpm (cites third-party X post; low reliability)"
+ },
+ "deluge_pad2_test_flow_m3ps": {
+  "value": 41,
+  "unit": "m3/s",
+  "prov": "est",
+  "ref": "650000*3.785e-3/60"
+ },
+ "launch_table_mass_pad1_t": {
+  "value": 370,
+  "unit": "t",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Starbase"
+ },
+ "deluge_vaporisation_energy_J": {
+  "value": 3400000000000.0,
+  "unit": "J",
+  "prov": "est",
+  "ref": "1.325e6 kg x 2.6 MJ/kg"
+ },
+ "combustion_h2o_tps": {
+  "value": 11,
+  "unit": "t/s",
+  "prov": "est",
+  "ref": "upper bound, full oxidation of 19.5 t/s LOX"
+ },
+ "combustion_co2_tps": {
+  "value": 13.4,
+  "unit": "t/s",
+  "prov": "est",
+  "ref": "upper bound"
+ },
+ "sound_speed_25C_mps": {
+  "value": 346,
+  "unit": "m/s",
+  "prov": "est",
+  "ref": "331.3*sqrt(1+25/273.15)"
+ },
+ "sound_speed_15C_mps": {
+  "value": 340,
+  "unit": "m/s",
+  "prov": "est",
+  "ref": "ISA"
+ },
+ "acoustic_eff_central": {
+  "value": 0.005,
+  "unit": "fraction",
+  "prov": "est",
+  "ref": "0.2-1% rule of thumb (NASA SP-8072, recalled, not fetched)"
+ },
+ "sound_power_level_dB": {
+  "value": 208,
+  "unit": "dB re 1 pW",
+  "prov": "est",
+  "ref": "10log10(0.005*1.31e11/1e-12); range 204-211"
+ },
+ "spl_100m_dB": {
+  "value": 160,
+  "unit": "dB",
+  "prov": "est",
+  "ref": "Lw-20log r-8, free field, no deluge; overpredicts far field"
+ },
+ "spl_1km_dB": {
+  "value": 140,
+  "unit": "dB",
+  "prov": "est",
+  "ref": "same model"
+ },
+ "spl_10km_measured_dB": {
+  "value": 105,
+  "unit": "dB",
+  "prov": "src",
+  "ref": "https://old-man-par.com/2024/12/11/starship-measured-at-ten-times-falcon-9-sound-level/ (Gee et al., JASA-EL Nov 2024; Port Isabel 6.2 mi)"
+ },
+ "spl_20km_measured_dB": {
+  "value": 90,
+  "unit": "dB",
+  "prov": "src",
+  "ref": "same (Laguna Vista 12.4 mi)"
+ },
+ "near_field_dB": {
+  "value": 200,
+  "unit": "dB",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/Sound_suppression_system ('approaching 200 dB' at launch pads)"
+ },
+ "faa_lmax_contour_dB": {
+  "value": 134,
+  "unit": "dB",
+  "prov": "src",
+  "ref": "https://www.faa.gov/media/72826 via search summary; contour within Starbase property"
+ },
+ "sound_front_radius_at_photo_m": {
+  "value": 3800,
+  "unit": "m",
+  "prov": "est",
+  "ref": "346 m/s x (T+7.5 + 3) s from ignition"
+ },
+ "plume_radiant_flux_100m_kWm2": {
+  "value": 40,
+  "unit": "kW/m2",
+  "prov": "est",
+  "ref": "order of magnitude: eps 0.2, T 2500 K, view factor 0.1"
+ },
+ "plume_radiant_flux_1km_kWm2": {
+  "value": 0.4,
+  "unit": "kW/m2",
+  "prov": "est",
+  "ref": "order of magnitude"
+ },
+ "raptor_exit_mach": {
+  "value": 4.1,
+  "unit": "Mach",
+  "prov": "est",
+  "ref": "isentropic gamma 1.2, expansion ratio 34"
+ },
+ "flight14_liftoff_utc": {
+  "value": "2026-09-28T12:48:59Z",
+  "unit": "ISO",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+ },
+ "flight13_liftoff_utc": {
+  "value": "2026-07-24T22:51:00Z",
+  "unit": "ISO",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/Starship_flight_test_13"
+ },
+ "flight12_liftoff_utc": {
+  "value": "2026-05-22T22:30:22Z",
+  "unit": "ISO",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/Starship_flight_test_12"
+ },
+ "sun_elevation_f14_liftoff_deg": {
+  "value": 8,
+  "unit": "deg",
+  "prov": "est",
+  "ref": "solar geometry, lat 26N, decl -2.6, ~34 min after sunrise ~7:15 CDT"
+ }
+}

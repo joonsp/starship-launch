@@ -1,0 +1,52 @@
+{
+ "image": {"width":1677,"height":943,"file":"research/reference.jpeg"},
+ "note": "pixel coords (x right, y down). All values est from pixel scans; +-3 px unless noted.",
+ "landmarks": {
+  "ship_nose_tip": {"x":826,"y":233},
+  "ship_dark_top_of_cone_base": {"x":822,"y":245},
+  "ship_aft_flap_flare": {"y_top":300,"y_bottom":318,"x_left":811,"x_right":837,"note":"widest black section, aft flaps and hot-stage ring shoulder"},
+  "ship_booster_boundary": {"x":820,"y":322},
+  "booster_engine_plane_base": {"x":818,"y":441,"note":"bright plume begins at y about 441"},
+  "booster_frost_change": {"y":366,"note":"above this row booster is dark grey-blue (RGB 60-75,70-80,80-90); below it lighter frost (100-118). Estimated common dome / LOX-CH4 boundary about 45 m above booster base"},
+  "tower_top": {"x":798,"y":467},
+  "tower_left_arm_tip": {"x":783,"y":492},
+  "tower_right_arm_tip": {"x":853,"y":492},
+  "tower_body_x_range": [790,810],
+  "tower_base": {"x":797,"y":675,"note":"hidden by smoke; est"},
+  "horizon_line_y": 526,
+  "horizon_tilt": "about 0 (525 at x=700, 527 at x=1000)",
+  "plume_column_ground_impact": {"x":815,"y":672},
+  "ground_glare_centre": {"x":845,"y":650,"note":"bright yellow blob RGB 245,221,129"},
+  "rocket_axis_x": 818
+ },
+ "scale": {
+  "m_per_px_at_rocket": {"value":0.60,"prov":"est","ref":"ship 88 px = 52 m, booster 119 px = 72.3 m"},
+  "stack_px": 208,
+  "camera_est": {"distance_m":800,"height_above_ground_m":95,"hfov_deg":74,"prov":"est","ref":"assumes drone wide lens; distance from px scale; height from tower base 150 px below horizon"},
+  "camera_pitch_deg_up": 2.3
+ },
+ "colors_rgb": {
+  "ship_tiles_black": [15,14,17],
+  "ship_aft_flap_dark": [46,39,37],
+  "booster_frost_lit_right_edge": [236,210,172],
+  "booster_frost_shaded_centre": [105,105,110],
+  "booster_upper_dark_steel": [70,74,85],
+  "plume_core": [245,215,210],
+  "plume_ground_glare": [245,221,129],
+  "smoke_lit_orange": [159,119,89],
+  "smoke_shadow_blue_grey": [130,140,145],
+  "sky_top": [20,124,185],
+  "sky_near_horizon": [157,159,156],
+  "sea": [68,97,109],
+  "tower_red": [104,72,69],
+  "ground_mud": [73,63,59],
+  "pad_slab": [80,64,63]
+ },
+ "facing": {
+  "ship": "black windward/tile side toward camera; right edge glints (sun from right)",
+  "booster": "camera sees a side with heavy frost below the dome line; grid fins not resolvable",
+  "tower": "left of and slightly behind the rocket; plume overlaps its right part"
+ },
+ "frost_pattern": "lower about 60% of booster (below y=366) is bright mottled frost; upper about 40% is darker grey-blue near-bare steel with thin frost. Est: LOX tank below about 45 m, CH4 above.",
+ "rocket_altitude_est": {"booster_base_above_pad_m":140,"prov":"est","ref":"84 px above horizon = 3.7 deg at 800 m, camera 95 m up => about 145 m above ground"}
+}

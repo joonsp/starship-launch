@@ -1,0 +1,317 @@
+{
+ "booster": {
+  "fi": "ensimmäinen vaihe (Super Heavy -kantoraketti); puhekielessä booster",
+  "note": "Ursa: 'boosteriksi kutsuttu ensimmäinen vaihe'; avaruus.fi: 'Super Heavy -nimisestä ensimmäisestä vaiheesta'. Use 'ensimmäinen vaihe' in UI, 'booster' in brackets. (https://www.ursa.fi/blogi/terveisia-kiertoradalta/starshipin-lento-lauantaina-oli-menestys-mutta-myos-ei-ollut/ ; https://www.avaruus.fi/uutiset/kantoraketit-ja-satelliitit/starshipin-kolmosversio-lensi-ensimmaeisen-kerran-yritaemme-tarkoituksella-loeytaeae-missae-rajamme-ovat.html)",
+  "certainty": "high"
+ },
+ "upper stage / ship": {
+  "fi": "toinen vaihe (Starship-alus)",
+  "note": "Ursa: 'toinen vaihe, itse avaruuteen menevä alus, Starship'",
+  "certainty": "high"
+ },
+ "launch vehicle": {
+  "fi": "kantoraketti",
+  "note": "Standard (fi.wikipedia Raketti). It means the whole launch vehicle, so avoid it for the booster stage alone (the brief's 'kantoraketti' for booster is imprecise).",
+  "certainty": "high"
+ },
+ "Raptor engine": {
+  "fi": "Raptor-moottori (Raptor-rakettimoottori)",
+  "note": "avaruus.fi 'Raptor-moottorista'; Ursa 'Raptor-rakettimoottori'",
+  "certainty": "high"
+ },
+ "rocket engine": {
+  "fi": "rakettimoottori",
+  "note": "fi.wikipedia",
+  "certainty": "high"
+ },
+ "launch tower": {
+  "fi": "laukaisutorni",
+  "note": "Natural compound; Finnish Wikipedia reportedly uses 'laukaisu- ja integraatiotorni' for the OLIT (read via summariser, unverified)",
+  "certainty": "medium"
+ },
+ "launch mount": {
+  "fi": "laukaisualusta (laukaisupöytä)",
+  "note": "Ursa uses 'laukaisualusta' for the launch structure; 'laukaisupöytä' for the table is my suggestion",
+  "certainty": "medium"
+ },
+ "chopsticks (tower catch arms)": {
+  "fi": "tarttumavarret (puhekielessä syömäpuikot)",
+  "note": "Ursa: 'syömäpuikot, joilla Super Heavy ja Starship nostetaan paikalleen'. 'tarttumavarret' is my formal suggestion, not found in a source.",
+  "certainty": "medium"
+ },
+ "tower catch": {
+  "fi": "kiinniotto tornin varsilla (tornikoppaus)",
+  "note": "No established term found; Yle headline said the booster 'laskeutui telineeseen' (https://yle.fi/a/74-20117610). Suggested term is my own.",
+  "certainty": "low"
+ },
+ "grid fins": {
+  "fi": "ritilä-evät (ritiläsiivekkeet)",
+  "note": "No corpus source found by search; Finnish Wikipedia summary reported 'ritilä siiveke' (unverified). Show 'grid fins' in brackets.",
+  "certainty": "low"
+ },
+ "heat shield tiles": {
+  "fi": "lämpösuojalaatat",
+  "note": "Ursa: 'lämpösuojakerros'; fi.wikipedia reportedly 'lämpökilpi' (unverified). 'lämpösuojalaatat' fits tiles.",
+  "certainty": "medium"
+ },
+ "thrust": {
+  "fi": "työntövoima",
+  "note": "Ursa 'työntövoimaa'; fi.wikipedia",
+  "certainty": "high"
+ },
+ "specific impulse": {
+  "fi": "ominaisimpulssi",
+  "note": "fi.wikipedia Ominaisimpulssi; ve = g0*Isp",
+  "certainty": "high"
+ },
+ "mass flow rate": {
+  "fi": "massavirta",
+  "note": "Standard physics term; not checked in a rocket text",
+  "certainty": "medium"
+ },
+ "exhaust velocity": {
+  "fi": "suihkunopeus (poistumisnopeus)",
+  "note": "fi.wikipedia Ominaisimpulssi uses 'suihkunopeus'",
+  "certainty": "high"
+ },
+ "nozzle": {
+  "fi": "suutin",
+  "note": "fi.wikipedia Raketti",
+  "certainty": "high"
+ },
+ "chamber pressure": {
+  "fi": "palotilan paine (polttokammion paine)",
+  "note": "Standard wording, not checked in a source",
+  "certainty": "medium"
+ },
+ "propellant": {
+  "fi": "ajoaine",
+  "note": "fi.wikipedia Raketti and Starship",
+  "certainty": "high"
+ },
+ "oxidizer": {
+  "fi": "hapetin",
+  "note": "fi.wikipedia Raketti",
+  "certainty": "high"
+ },
+ "liquid methane": {
+  "fi": "nestemetaani",
+  "note": "fi.wikipedia Starship (via summariser)",
+  "certainty": "medium"
+ },
+ "liquid oxygen": {
+  "fi": "nestemäinen happi (nestehappi)",
+  "note": "fi.wikipedia Starship (via summariser)",
+  "certainty": "medium"
+ },
+ "mixture ratio (O/F)": {
+  "fi": "hapetin-polttoainesuhde (O/F)",
+  "note": "Own suggestion",
+  "certainty": "low"
+ },
+ "speed of sound": {
+  "fi": "äänen nopeus",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "Mach number": {
+  "fi": "Machin luku",
+  "note": "fi.wikipedia article title is 'Mach-luku'; both spellings occur",
+  "certainty": "high"
+ },
+ "Mach diamonds / shock diamonds": {
+  "fi": "Machin timantit (iskuaaltokuvio; iskuaaltotimantit)",
+  "note": "No Finnish rocket text found using it. Suggest 'iskuaaltokuvio (Machin timantit)'. The brief's 'Mach-timantit' is understandable.",
+  "certainty": "low"
+ },
+ "overexpanded nozzle": {
+  "fi": "ylilaajentunut suutin (suuttimen ulostulopaine alle ympäristön paineen)",
+  "note": "Own translation",
+  "certainty": "low"
+ },
+ "shock wave": {
+  "fi": "iskuaalto",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "afterburning": {
+  "fi": "jälkipoltto",
+  "note": "Own use of standard combustion term",
+  "certainty": "medium"
+ },
+ "plume": {
+  "fi": "pakokaasusuihku (liekki)",
+  "note": "Own suggestion",
+  "certainty": "medium"
+ },
+ "hot staging": {
+  "fi": "hot staging, eli aktiivinen vaiheiden irrotus (kuuma vaiheistus)",
+  "note": "Ursa: 'Hot staging, eli aktiivinen vaiheiden irrotus' (read via summariser). 'kuumaerotus' (the brief's suggestion) was not found anywhere; avoid it.",
+  "certainty": "medium"
+ },
+ "stage separation": {
+  "fi": "vaiheiden erotus",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "Max-Q": {
+  "fi": "suurin dynaaminen paine (Max-Q)",
+  "note": "Own suggestion; 'dynaaminen paine' is standard",
+  "certainty": "medium"
+ },
+ "dynamic pressure": {
+  "fi": "dynaaminen paine",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "MECO (main engine cut-off)": {
+  "fi": "päämoottorien sammutus (MECO)",
+  "note": "Own suggestion",
+  "certainty": "medium"
+ },
+ "boostback burn": {
+  "fi": "paluupoltto (boostback)",
+  "note": "Own suggestion",
+  "certainty": "low"
+ },
+ "landing burn": {
+  "fi": "laskeutumispoltto",
+  "note": "Own suggestion",
+  "certainty": "medium"
+ },
+ "splashdown": {
+  "fi": "mereenlasku",
+  "note": "Own suggestion (summariser gave 'mereenmolskahdus', unreliable)",
+  "certainty": "medium"
+ },
+ "thrust-to-weight ratio": {
+  "fi": "työntövoima-painosuhde",
+  "note": "Standard (työntövoima / paino)",
+  "certainty": "medium"
+ },
+ "Tsiolkovsky rocket equation": {
+  "fi": "Tsiolkovskin rakettiyhtälö (Tsiolkovskin laki)",
+  "note": "fi.wikipedia Raketti reportedly says 'Tsiolkovskin laki'",
+  "certainty": "medium"
+ },
+ "delta-v": {
+  "fi": "nopeusmuutos (delta-v)",
+  "note": "Standard",
+  "certainty": "medium"
+ },
+ "mass ratio": {
+  "fi": "massasuhde",
+  "note": "fi.wikipedia Raketti",
+  "certainty": "high"
+ },
+ "gravity": {
+  "fi": "painovoima",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "drag": {
+  "fi": "ilmanvastus",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "flame trench / flame deflector": {
+  "fi": "liekkikanava / liekinohjain",
+  "note": "Own translation",
+  "certainty": "low"
+ },
+ "water deluge system": {
+  "fi": "vesikastelujärjestelmä (jäähdytys- ja äänenvaimennusvesi)",
+  "note": "Own translation; no Finnish source",
+  "certainty": "low"
+ },
+ "sound suppression": {
+  "fi": "äänenvaimennus",
+  "note": "Own",
+  "certainty": "medium"
+ },
+ "steam": {
+  "fi": "höyry (vesihöyry)",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "condensation": {
+  "fi": "tiivistyminen",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "cloud": {
+  "fi": "pilvi",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "sound pressure level": {
+  "fi": "äänenpainetaso",
+  "note": "Standard acoustics term",
+  "certainty": "high"
+ },
+ "sound power level": {
+  "fi": "äänitehotaso",
+  "note": "Standard acoustics term",
+  "certainty": "high"
+ },
+ "decibel": {
+  "fi": "desibeli",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "sound front": {
+  "fi": "ääniaaltorintama (äänirintama)",
+  "note": "Own suggestion",
+  "certainty": "medium"
+ },
+ "thermal radiation": {
+  "fi": "lämpösäteily",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "launch pad": {
+  "fi": "laukaisupaikka / laukaisualusta",
+  "note": "Ursa 'laukaisupaikka'",
+  "certainty": "high"
+ },
+ "liftoff": {
+  "fi": "irtoaminen maasta (nousu)",
+  "note": "Own; launch = laukaisu",
+  "certainty": "medium"
+ },
+ "test flight": {
+  "fi": "koelento",
+  "note": "Yle",
+  "certainty": "high"
+ },
+ "freeze frame": {
+  "fi": "pysäytyskuva",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "educational mode": {
+  "fi": "opetustila",
+  "note": "Standard UI wording",
+  "certainty": "high"
+ },
+ "reusable": {
+  "fi": "uudelleenkäytettävä",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "tank": {
+  "fi": "säiliö (ajoainesäiliö)",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "stainless steel": {
+  "fi": "ruostumaton teräs",
+  "note": "Standard",
+  "certainty": "high"
+ },
+ "Tsiolkovsky": {
+  "fi": "Tsiolkovski",
+  "note": "Finnish transliteration (Konstantin Tsiolkovski)",
+  "certainty": "medium"
+ }
+}

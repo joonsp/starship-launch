@@ -1,0 +1,14 @@
+import * as THREE from 'three';
+import { createSandbox } from './harness.ts';
+import { ANCHORS } from '../src/scene-config.ts';
+import { applyGlobals } from '../src/core/material-hooks.ts';
+const sb = await createSandbox({ title: 'harness smoke test', ground: false });
+const g = sb.ctx.globals;
+g.uPlumeLight.value.setRGB(1.0, 0.55, 0.25).multiplyScalar(0.6);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(20000, 20000), applyGlobals(new THREE.MeshStandardMaterial({ color: 0x5a524a, roughness: 1 }), g));
+ground.rotation.x = -Math.PI / 2; sb.ctx.scene.add(ground);
+const stack = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 124, 24), applyGlobals(new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9, roughness: 0.3 }), g, { kelvinExpr: 'vSlObjPos.y < 0.0 ? 110.0 : 280.0' }));
+stack.position.set(0, ANCHORS.vehicleBase.y + 62, 0); sb.ctx.scene.add(stack);
+const tower = new THREE.Mesh(new THREE.BoxGeometry(12.5, ANCHORS.towerHeight, 12.5), applyGlobals(new THREE.MeshStandardMaterial({ color: 0x884444 }), g));
+tower.position.set(ANCHORS.towerBase.x, ANCHORS.towerHeight / 2, ANCHORS.towerBase.z); sb.ctx.scene.add(tower);
+sb.start();

@@ -1,0 +1,446 @@
+{
+ "frame": {
+  "value": "origin = Pad 2 (OLP-2) vehicle axis at ground level; x east, y up, z south",
+  "unit": "",
+  "prov": "est",
+  "ref": "Origin lat 25.99680, lon -97.15804 derived from OSM (centre of the gap between Pad 2 chopstick arm ways). Cross-check: Launch Library alias OLP-2 = 25.99677,-97.15799 https://www.spacelaunchschedule.com/pad/orbital-launch-pad-2-spacex-starbase-tx-usa/ (about 4 m away)."
+ },
+ "origin_lat": {
+  "value": 25.9968,
+  "unit": "deg N",
+  "prov": "est",
+  "ref": "OSM-derived, +-5 m"
+ },
+ "origin_lon": {
+  "value": -97.15804,
+  "unit": "deg E",
+  "prov": "est",
+  "ref": "OSM-derived, +-5 m (site.json origin lon -97.15804001)"
+ },
+ "ground_elevation_asl": {
+  "value": 2.5,
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM tag ele=2.5 on way 1207227015 Starbase Integration Tower 2"
+ },
+ "pad_id": {
+  "value": "Pad 2 / Pad B / OLP-2 (western pad)",
+  "unit": "",
+  "prov": "est",
+  "ref": "Photo geometry (tower north of vehicle, camera looks NNE, OSM overlay aligns) plus Flight 14 launched from OLP-2 https://en.wikipedia.org/wiki/Starship_flight_14"
+ },
+ "flight_id": {
+  "value": "Starship Flight 14 (B21/S41), 2026-09-28 12:48:59 UTC = 07:48:59 CDT = 15:48:59 EEST",
+  "unit": "",
+  "prov": "est",
+  "ref": "Wikipedia flight 14. Photo light comes from the right/rear (sun ESE) = morning; flights 12/13 launched 17:30-17:51 CDT with sun in the west, so they are unlikely. Photo posted 22:30 on 2026-09-28 fits."
+ },
+ "photo_time_after_liftoff": {
+  "value": 8,
+  "unit": "s",
+  "prov": "est",
+  "ref": "vehicle bottom ~160 m above ground; net accel ~5 m/s^2 -> ~8 s (range 7-10)"
+ },
+ "vehicle_bottom_altitude_in_photo": {
+  "value": 160,
+  "unit": "m",
+  "prov": "est",
+  "ref": "engine-skirt image row y~440 vs tower-top row y~463 (tower top ~148 m); +-12 m"
+ },
+ "tower2_centre": {
+  "value": [
+   -3,
+   0,
+   -27
+  ],
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM way 1207227015 footprint centre in local frame"
+ },
+ "tower2_footprint": {
+  "value": [
+   16,
+   16
+  ],
+  "unit": "m (x,z)",
+  "prov": "est",
+  "ref": "OSM footprint bbox 16x16 (way 1207227015); photo shows lattice body only ~12-13 m wide aloft, so 16 m probably includes rails/legs"
+ },
+ "tower2_body_width_photo": {
+  "value": 12.5,
+  "unit": "m",
+  "prov": "est",
+  "ref": "18-20 px wide at ~1.53 px/m in reference.jpeg"
+ },
+ "tower2_height": {
+  "value": 144.5,
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM height=144.5 citing FAA OE case 619969843; Fandom OLIT-3 '474 ft (144.5 m)' https://starship-spacex.fandom.com/wiki/Orbital_Launch_and_Integration_Tower_3_(OLIT-3)"
+ },
+ "tower_height_range_faa": {
+  "value": [
+   143,
+   146
+  ],
+  "unit": "m",
+  "prov": "src",
+  "ref": "FAA structural filings list OLIT units 469-479 ft incl. lightning masts (Fandom OLIT page https://starship-spacex.fandom.com/wiki/Orbital_Launch_and_Integration_Tower_(OLIT)); Wikipedia says 146 m https://en.wikipedia.org/wiki/SpaceX_Starbase. Conflict: 144.5 (pad 2) vs 143 (pad 1, OSM) vs 146 (Wikipedia); chosen 144.5 for pad 2."
+ },
+ "tower_offset_from_axis": {
+  "value": 27.2,
+  "unit": "m",
+  "prov": "est",
+  "ref": "from OSM tower centre (-3,-27) to axis (0,0); tower is NORTH of the vehicle"
+ },
+ "chopstick_side": {
+  "value": "south (+z) of tower face, i.e. towards the OLM",
+  "unit": "",
+  "prov": "est",
+  "ref": "OSM gantry ways 1540152640-52 extend from tower face z=-19 to z=+8"
+ },
+ "chopstick_reach_from_tower_face": {
+  "value": 27,
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM gantry ways (carriage z -17..-8, arms z -8..+8); crowd-mapped, +-3 m"
+ },
+ "chopstick_arm_length": {
+  "value": 17,
+  "unit": "m",
+  "prov": "est",
+  "ref": "OSM arm ways ~16 m plus hinge; Pad B arms are 'noticeably shorter' than Pad A: https://spaceexplored.com/2025/07/28/the-key-differences-between-starships-pad-a-and-b/ ; https://www.teslaoracle.com/2025/03/25/spacex-installs-redesigned-chopsticks-pad-b-launch-tower-starship-catch-giga-bay-construction-starbase-updates/"
+ },
+ "chopstick_inner_gap_closed_x": {
+  "value": [
+   -5,
+   7
+  ],
+  "unit": "m",
+  "prov": "est",
+  "ref": "OSM arm inner edges: 12 m gap for the 9 m booster; arm axis x=+1 before origin shift"
+ },
+ "chopstick_carriage_height_in_photo": {
+  "value": 124,
+  "unit": "m",
+  "prov": "est",
+  "ref": "crossbar with fork ends at image y~495; tower base row ~685; 1.53 px/m; +-6 m"
+ },
+ "chopstick_open_span_photo": {
+  "value": 44,
+  "unit": "m",
+  "prov": "est",
+  "ref": "crossbar 782->852 px at 1.53 px/m (arms swung open)"
+ },
+ "qd_arm_boom_height_in_photo": {
+  "value": 65,
+  "unit": "m",
+  "prov": "est",
+  "ref": "boom with hanging line on west side of tower at image y~585; probable QD/service arm; LOW confidence"
+ },
+ "pad2_booster_QDs": {
+  "value": "dual booster quick disconnects (LCH4 and LOX) on the opposite side of the mount from Pad 1",
+  "unit": "",
+  "prov": "src",
+  "ref": "NSF Pad 2 advancements article (snippet) https://nasaspaceflight.com/2025/08/starbase-pad-2-advancements-pad-1/"
+ },
+ "lightning_masts": {
+  "value": "on tower top; included in the 143-146 m FAA height",
+  "unit": "",
+  "prov": "src",
+  "ref": "FAA/Fandom OLIT snippet above"
+ },
+ "olm_centre": {
+  "value": [
+   0,
+   0,
+   0
+  ],
+  "unit": "m",
+  "prov": "est",
+  "ref": "vehicle axis by definition"
+ },
+ "olm_height": {
+  "value": 20,
+  "unit": "m",
+  "prov": "est",
+  "ref": "LOW confidence recollection of OLM table height; NSF forum thread 'OLM height and width' https://forum.nasaspaceflight.com/index.php?topic=58105.0 could not be fetched (403)"
+ },
+ "olm_shape_pad2": {
+  "value": "square/'quadratic' water-cooled deck with central circular booster opening; 20 hold-down clamp arms; rolled to Pad B 6 May 2025, lifted onto columns 12 May 2025",
+  "unit": "",
+  "prov": "src",
+  "ref": "https://spaceexplored.com/2025/07/28/the-key-differences-between-starships-pad-a-and-b/ ; https://starship-spacex.fandom.com/wiki/Pad_B_(Starbase) (search snippets; pages themselves 402/blocked)"
+ },
+ "olm_footprint_pad2": {
+  "value": [
+   34,
+   34
+  ],
+  "unit": "m",
+  "prov": "est",
+  "ref": "LOW confidence; chopstick outer width ~20 m plus support columns; unsourced"
+ },
+ "olm_mass_pad1": {
+  "value": 370,
+  "unit": "t",
+  "prov": "src",
+  "ref": "Wikipedia: 370 t launch table https://en.wikipedia.org/wiki/SpaceX_Starbase"
+ },
+ "flame_trench_pad2": {
+  "value": "dedicated bathtub-shaped sheet-pile/CFA-pile reinforced-concrete trench, stainless-lined, water-cooled double-sided flame-bucket diverter beneath the mount",
+  "unit": "",
+  "prov": "src",
+  "ref": "https://starship-spacex.fandom.com/wiki/Pad_B_(Starbase) (search snippet); https://spaceexplored.com/2025/07/28/the-key-differences-between-starships-pad-a-and-b/"
+ },
+ "flame_trench_pad2_orientation": {
+  "value": "long axis east-west; exhaust splits east and west",
+  "unit": "",
+  "prov": "est",
+  "ref": "photo: cloud banks left/right, none towards camera; tower north, arms south"
+ },
+ "flame_trench_pad2_size": {
+  "value": [
+   60,
+   25,
+   8
+  ],
+  "unit": "m (length,width,depth)",
+  "prov": "est",
+  "ref": "LOW confidence; unsourced"
+ },
+ "deluge_runoff_pond_pad2": {
+  "value": {
+   "centre": [
+    -25,
+    0,
+    57
+   ],
+   "note": "basin ~35x30 m"
+  },
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM way 1486752424 'Pad-2 Deluge Runoff Pond'"
+ },
+ "pad1_axis": {
+  "value": [
+   359,
+   0,
+   72
+  ],
+  "unit": "m",
+  "prov": "est",
+  "ref": "OSM tower1 centre (331.5,74.5), arms z 62..82 and x to 368 -> axis 19 m from tower face, same rule as pad 2"
+ },
+ "pad1_tower_centre": {
+  "value": [
+   331.5,
+   0,
+   74.5
+  ],
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM way 968227813 (height=143, FAA OE 619974437)"
+ },
+ "pad1_tower_height": {
+  "value": 143,
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM height=143; Wikipedia 146 m"
+ },
+ "pad1_chopsticks_side": {
+  "value": "east (+x) of tower",
+  "unit": "",
+  "prov": "est",
+  "ref": "OSM gantry ways 1529212440-51"
+ },
+ "pad1_offset_from_pad2": {
+  "value": 366,
+  "unit": "m",
+  "prov": "est",
+  "ref": "sqrt(359^2+72^2)"
+ },
+ "pad1_tower_to_tower": {
+  "value": 350,
+  "unit": "m",
+  "prov": "est",
+  "ref": "(331.5,74.5) vs (-3,-27)"
+ },
+ "pad1_bearing_from_pad2": {
+  "value": 101,
+  "unit": "deg true",
+  "prov": "est",
+  "ref": "atan2(east 359, south 72)"
+ },
+ "pad1_status": {
+  "value": "decommissioned 14 Oct 2025 for V3 upgrades (11 launches, 3 booster catches); under reconstruction in 2026",
+  "unit": "",
+  "prov": "src",
+  "ref": "https://en.wikipedia.org/wiki/SpaceX_Starbase ; https://en.wikipedia.org/wiki/SpaceX_Starship"
+ },
+ "pad1_mount_shape": {
+  "value": "original circular donut mount with water-cooled steel deluge plate, no flame trench",
+  "unit": "",
+  "prov": "src",
+  "ref": "https://spaceexplored.com/2025/07/28/the-key-differences-between-starships-pad-a-and-b/ ; OSM shows a 'Flame Trench' polygon at pad 1 (67x77 m centre (366,74), way 1549519359)"
+ },
+ "tank_farm_extent": {
+  "value": "polygon x 145..467, z -110..+24, centroid (352,-28)",
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM way 'SpaceX Orbital Launch Pad Tank Farm'"
+ },
+ "tank_farm_pad2_end_centre": {
+  "value": [
+   196,
+   0,
+   -85
+  ],
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM 'Pad 2 LOX GSE' 58x42 m; 'Pad 2 CH4 GSE' centre (182,-59) 64x35 m"
+ },
+ "tank_horizontal_lox_ln2": {
+  "value": {
+   "count": 14,
+   "diameter": 5.8,
+   "length": 48.4
+  },
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM storage_tank rectangles, LOX/LN2, centres x 219..352, z -52..-29, long axis ~12.5 deg off east-west"
+ },
+ "tank_horizontal_ch4_large": {
+  "value": {
+   "count": 6,
+   "diameter": 6.5,
+   "length": 50.2
+  },
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM storage_tank ways at x 358..394, z -26..-21"
+ },
+ "tank_horizontal_ch4_small": {
+  "value": {
+   "count": 2,
+   "diameter": 8.0,
+   "length": 31.3
+  },
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM ways x 415-425, z -23"
+ },
+ "tank_water_deluge": {
+  "value": {
+   "count": 13,
+   "diameter": 3.4,
+   "length_m": "26 (x8), 39 (x5)"
+  },
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM storage_tank content=water at x 52..98, z -72..-60 (nearest Pad 2)"
+ },
+ "tank_small_vertical": {
+  "value": {
+   "count": 8,
+   "size": 2.7
+  },
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM nitrogen/other small tanks"
+ },
+ "vaporizers": {
+  "value": 30,
+  "unit": "count",
+  "prov": "src",
+  "ref": "OSM name=Vaporizer, ~3x3 m each"
+ },
+ "buildings_pad2": {
+  "value": {
+   "Pad 2 Power & Comms": [
+    81,
+    -134
+   ],
+   "Gas generators": [
+    91,
+    -86
+   ],
+   "Control Center": [
+    58,
+    -124
+   ],
+   "Megabunker": [
+    133,
+    -121
+   ],
+   "Power Bunker": [
+    233,
+    -102
+   ],
+   "CH4 Reclaim": [
+    178,
+    -39
+   ],
+   "Starhopper": [
+    67,
+    -197
+   ]
+  },
+  "unit": "m (x,z)",
+  "prov": "src",
+  "ref": "OSM named buildings"
+ },
+ "coast_distance_east": {
+  "value": 750,
+  "unit": "m",
+  "prov": "src",
+  "ref": "OSM natural=coastline ways 1230230739/975/976 at x~+750 near pad latitude"
+ },
+ "coast_bearing": {
+  "value": "NNW-SSE, about 6 deg east of south going south",
+  "unit": "",
+  "prov": "src",
+  "ref": "OSM coastline geometry"
+ },
+ "sun_alt": {
+  "value": 19,
+  "unit": "deg",
+  "prov": "est",
+  "ref": "solar position for 25.997N at 12:48:59 UTC 2026-09-28"
+ },
+ "sun_az": {
+  "value": 100,
+  "unit": "deg true",
+  "prov": "est",
+  "ref": "same calc; sun ESE, ~73 deg right of camera heading"
+ },
+ "camera_position": {
+  "value": [
+   -308,
+   105,
+   634
+  ],
+  "unit": "m",
+  "prov": "est",
+  "ref": "camera-estimate.md; lat 25.99108, lon -97.16112"
+ },
+ "camera_heading_pitch_roll": {
+  "value": [
+   26.8,
+   2.7,
+   0.2
+  ],
+  "unit": "deg",
+  "prov": "est",
+  "ref": "camera-estimate.md"
+ },
+ "camera_focal_px_hfov": {
+  "value": [
+   1133,
+   73
+  ],
+  "unit": "px, deg",
+  "prov": "est",
+  "ref": "camera-estimate.md"
+ }
+}

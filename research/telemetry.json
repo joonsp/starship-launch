@@ -1,0 +1,346 @@
+{
+ "_note": "SpaceX webcast HUD altitude/speed values were NOT retrievable from any accessible text source; alt_m/v_mps are null for src rows. 'model_est' rows are a 2-D point-mass integration (see physics.md), NOT telemetry, +-20% beyond T+30 s.",
+ "F10": [
+  {
+   "t_s": 62,
+   "event": "Max-Q",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_10"
+  },
+  {
+   "t_s": 156,
+   "event": "MECO",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_10"
+  },
+  {
+   "t_s": 158,
+   "event": "hot staging",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_10"
+  },
+  {
+   "t_s": 168,
+   "event": "boostback start",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_10"
+  },
+  {
+   "t_s": 380,
+   "event": "landing burn start",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_10"
+  }
+ ],
+ "F11": [
+  {
+   "t_s": 62,
+   "event": "Max-Q",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_11"
+  },
+  {
+   "t_s": 157,
+   "event": "MECO",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_11"
+  },
+  {
+   "t_s": 159,
+   "event": "hot staging",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_11"
+  },
+  {
+   "t_s": 169,
+   "event": "boostback start",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_11"
+  },
+  {
+   "t_s": 380,
+   "event": "landing burn start",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_11"
+  }
+ ],
+ "F12": [
+  {
+   "t_s": 45,
+   "event": "Max-Q",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_12"
+  },
+  {
+   "t_s": 142,
+   "event": "MECO",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_12"
+  },
+  {
+   "t_s": 144,
+   "event": "hot staging",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_12"
+  },
+  {
+   "t_s": 150,
+   "event": "boostback start",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_12"
+  },
+  {
+   "t_s": 394,
+   "event": "landing burn start",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_12"
+  }
+ ],
+ "F13": [
+  {
+   "t_s": 58,
+   "event": "Max-Q",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_13"
+  },
+  {
+   "t_s": 138,
+   "event": "MECO",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_13"
+  },
+  {
+   "t_s": 141,
+   "event": "hot staging",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_13"
+  },
+  {
+   "t_s": 145,
+   "event": "boostback start",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_13"
+  },
+  {
+   "t_s": 387,
+   "event": "landing burn start",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_13"
+  }
+ ],
+ "F14": [
+  {
+   "t_s": 58,
+   "event": "Max-Q",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+  },
+  {
+   "t_s": 140,
+   "event": "MECO",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+  },
+  {
+   "t_s": 142,
+   "event": "hot staging",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+  },
+  {
+   "t_s": 147,
+   "event": "boostback start (26 of 28 relit)",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+  },
+  {
+   "t_s": 395,
+   "event": "landing burn start (11 of 13)",
+   "alt_m": null,
+   "v_mps": null,
+   "prov": "src",
+   "src": "https://en.wikipedia.org/wiki/Starship_flight_test_14"
+  }
+ ],
+ "model_est": [
+  {
+   "t_s": 0,
+   "alt_m": 0,
+   "v_mps": 0,
+   "prov": "est",
+   "src": "release"
+  },
+  {
+   "t_s": 5,
+   "alt_m": 66,
+   "v_mps": 26.7,
+   "mach": 0.08,
+   "q_kPa": 0.4,
+   "prov": "est",
+   "src": "physics.md integrator, M0=5400 t, F=80.8 MN, Isp 330 s, 3 deg kick at T+10, throttle bucket est"
+  },
+  {
+   "t_s": 10,
+   "alt_m": 270,
+   "v_mps": 55.2,
+   "mach": 0.16,
+   "q_kPa": 1.8,
+   "prov": "est",
+   "src": "physics.md integrator, M0=5400 t, F=80.8 MN, Isp 330 s, 3 deg kick at T+10, throttle bucket est"
+  },
+  {
+   "t_s": 15,
+   "alt_m": 621,
+   "v_mps": 85.7,
+   "mach": 0.25,
+   "q_kPa": 4.2,
+   "prov": "est",
+   "src": "physics.md integrator, M0=5400 t, F=80.8 MN, Isp 330 s, 3 deg kick at T+10, throttle bucket est"
+  },
+  {
+   "t_s": 20,
+   "alt_m": 1130,
+   "v_mps": 118.5,
+   "mach": 0.35,
+   "q_kPa": 7.7,
+   "prov": "est",
+   "src": "physics.md integrator, M0=5400 t, F=80.8 MN, Isp 330 s, 3 deg kick at T+10, throttle bucket est"
+  },
+  {
+   "t_s": 30,
+   "alt_m": 2661,
+   "v_mps": 191.7,
+   "mach": 0.58,
+   "q_kPa": 17.3,
+   "prov": "est",
+   "src": "physics.md integrator, M0=5400 t, F=80.8 MN, Isp 330 s, 3 deg kick at T+10, throttle bucket est"
+  },
+  {
+   "t_s": 45,
+   "alt_m": 6338,
+   "v_mps": 304.4,
+   "mach": 0.97,
+   "q_kPa": 29.4,
+   "prov": "est",
+   "src": "physics.md integrator, M0=5400 t, F=80.8 MN, Isp 330 s, 3 deg kick at T+10, throttle bucket est"
+  },
+  {
+   "t_s": 60,
+   "alt_m": 11150,
+   "v_mps": 378.2,
+   "mach": 1.28,
+   "q_kPa": 25.4,
+   "prov": "est",
+   "src": "physics.md integrator, M0=5400 t, F=80.8 MN, Isp 330 s, 3 deg kick at T+10, throttle bucket est"
+  },
+  {
+   "t_s": 75,
+   "alt_m": 16721,
+   "v_mps": 477.9,
+   "mach": 1.62,
+   "q_kPa": 16.9,
+   "prov": "est",
+   "src": "physics.md integrator, M0=5400 t, F=80.8 MN, Isp 330 s, 3 deg kick at T+10, throttle bucket est"
+  },
+  {
+   "t_s": 90,
+   "alt_m": 23340,
+   "v_mps": 663.7,
+   "mach": 2.23,
+   "q_kPa": 11.3,
+   "prov": "est",
+   "src": "physics.md integrator, M0=5400 t, F=80.8 MN, Isp 330 s, 3 deg kick at T+10, throttle bucket est"
+  },
+  {
+   "t_s": 105,
+   "alt_m": 31395,
+   "v_mps": 913.4,
+   "mach": 3.02,
+   "q_kPa": 6.1,
+   "prov": "est",
+   "src": "physics.md integrator, M0=5400 t, F=80.8 MN, Isp 330 s, 3 deg kick at T+10, throttle bucket est"
+  },
+  {
+   "t_s": 120,
+   "alt_m": 40804,
+   "v_mps": 1218.2,
+   "mach": 3.94,
+   "q_kPa": 2.6,
+   "prov": "est",
+   "src": "physics.md integrator, M0=5400 t, F=80.8 MN, Isp 330 s, 3 deg kick at T+10, throttle bucket est"
+  },
+  {
+   "t_s": 140,
+   "alt_m": 55274,
+   "v_mps": 1725.5,
+   "mach": 5.42,
+   "q_kPa": 0.7,
+   "prov": "est",
+   "src": "physics.md integrator, M0=5400 t, F=80.8 MN, Isp 330 s, 3 deg kick at T+10, throttle bucket est"
+  }
+ ],
+ "tower_level_est": [
+  {
+   "t_s": 6.86,
+   "alt_m": 125,
+   "v_mps": 37.0,
+   "prov": "est",
+   "src": "vertical integrator; base rise to tower top if OLM 20 m; range 6.7-7.9 s"
+  },
+  {
+   "t_s": 7.38,
+   "alt_m": 145,
+   "v_mps": 40.0,
+   "prov": "est",
+   "src": "vertical integrator; if OLM height 0"
+  }
+ ]
+}

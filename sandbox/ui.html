@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sandbox · UI shell</title>
+  <style>
+    /* Gradient stand-in for the 3D view: bright blue sky over a warm, hazy horizon, dark ground. */
+    html, body { height: 100%; margin: 0; }
+    body { background: linear-gradient(180deg, #3f7fc4 0%, #7fb2df 38%, #f2c9a0 62%, #d99a68 70%, #4a4038 71%, #2a2622 100%); overflow: hidden; }
+    body.photo { background: #000 url(/research/reference.jpeg) center / cover no-repeat; }   /* local contrast check only, never shipped */
+  </style>
+</head>
+<body>
+  <script type="module" src="./ui.ts"></script>
+</body>
+</html>
