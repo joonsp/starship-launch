@@ -1,26 +1,34 @@
 // Layout of the background fair-weather cumulus, and the two textures the sky bake marches.
 //
-// Every cloud is a CELL: an ellipsoid whose widest section sits a little above the common, flat condensation level
-// (CLOUD_BASE), which cuts it: flat bases, bulging flanks and a rounded crown. A cumulus cluster is a broad body plus
-// turrets (smaller, taller ellipsoids centred on the body's top). The cells are turned into
+// Every cloud is a CELL: an ellipsoid standing on the common condensation level (CLOUD_BASE). A cumulus is a broad
+// body (a dome about as tall as it is wide, its widest section a little above the base) plus a TOWER of round lobes
+// (smaller ellipsoids stacked from the body top up to the crown), so a congestus rises well above its footprint and a
+// humilis stays a low dome. The cells are turned into
 //  - a 3D signed-distance volume of their smooth union (buildEnvelopeVolume), which the bake displaces with 3D billow
-//    noise (see glsl/sky_bake.frag.glsl), so the clouds are round in every direction, and
+//    noise and erodes with small-scale noise (see glsl/sky_bake.frag.glsl), so the clouds are round in every
+//    direction. The base is NOT cut here: the bake fades the density in over a soft, slightly ragged base, and lets
+//    fractus hang below it on ragged cells;
 //  - a 2D coverage map (buildCoverTexture) with exact distance fields of the footprints, so the bake can skip the
-//    empty sky between cells in a few big steps.
+//    empty sky between cells in a few big steps, plus each cell's RAGGEDNESS (B channel): 0 = a dense, crisp-edged
+//    tower, 1 = a thin, wispy fragment with soft, eroded edges and a ragged base.
 //
 // Two sources of cells:
 //  - PHOTO_CELLS, authored in photo space (pixel column, row of the tower top, range) and placed through the calibrated
 //    photo camera, so the photo view shows the clusters of research/reference.jpeg: a big cluster behind the rocket,
-//    a ridge rising to the upper left of centre, a separate cluster at the far left and small cells along the horizon;
+//    a ridge rising to the upper left of centre, a separate cluster at the far left and a broken band of small, ragged
+//    fragments along the horizon under the big cluster;
 //  - a seeded procedural field of scattered fair-weather cumulus everywhere else, kept out of the photo's view wedge,
 //    so orbit, walk and fly views see a plausible sky in every direction.
 import * as THREE from 'three';
-import { ANCHORS, applyPhotoCamera } from '../scene-config.ts';
+import { ANCHORS, SUN_DIR, applyPhotoCamera } from '../scene-config.ts';
 import { rng } from './noise.ts';
 
 /** Absolute altitude (m above the local ground) of the cumulus slab: common flat base and the highest possible top. */
 export const CLOUD_BASE = 820;
 export const CLOUD_TOP = 2900;
+/** How far (m) the soft, ragged base may reach below CLOUD_BASE, and how far billows may rise above a cell's top. */
+export const CLOUD_BELOW = 140;
+export const CLOUD_ABOVE = 300;
 /** Half size of the coverage map in metres (the map spans +-EXTENT around the origin). */
 export const COVER_EXTENT = 32000;
 /** Coverage map resolution (texels per side): 62 m per texel (it only drives empty-space skipping). */
@@ -28,12 +36,15 @@ export const COVER_RES = 1024;
 /** Range (m) of the inside distance (G channel) and of the outside distance (A channel). */
 export const COVER_DIN = 1200;
 export const COVER_DOUT = 6000;
-/** Envelope volume: +-VOL_EXTENT horizontally at VOL_RES^2 texels, VOL_LAYERS layers of VOL_DY from VOL_Y0 up. */
+/** How far (m) outside a footprint its raggedness (B channel) is carried, so the displaced fringe inherits it. */
+export const COVER_RAG_REACH = 420;
+/** Envelope volume: +-VOL_EXTENT horizontally at VOL_RES^2 texels, VOL_LAYERS layers of VOL_DY from VOL_Y0 up
+ *  (it reaches CLOUD_TOP + CLOUD_ABOVE, so no billow is ever cut off flat at the top). */
 export const VOL_EXTENT = 24000;
 export const VOL_RES = 512;
-export const VOL_LAYERS = 26;
-export const VOL_Y0 = CLOUD_BASE - 120;
 export const VOL_DY = 90;
+export const VOL_Y0 = CLOUD_BASE - CLOUD_BELOW - 20;
+export const VOL_LAYERS = Math.ceil((CLOUD_TOP + CLOUD_ABOVE - VOL_Y0) / VOL_DY);
 /** Signed distances are stored in +-VOL_RANGE metres (8 bits). */
 export const VOL_RANGE = 360;
 /** Smooth-union radius (m): bodies and turrets merge without creases. */
@@ -56,6 +67,8 @@ export interface CloudCell {
   yc: number;
   /** Lower vertical semi-axis as a fraction of the upper one: turrets sit ON their body (< 1), bodies are symmetric. */
   lo?: number;
+  /** Raggedness 0..1 (default 0.2): 0 = dense tower with crisp edges, 1 = thin fragment with wispy edges. */
+  rag?: number;
 }
 
 /** A cell authored in photo space. */
@@ -74,6 +87,8 @@ interface PhotoCell {
   sh?: number;
   /** Lower semi-axis factor (default 0.45 with `sh`, i.e. a turret sitting on its body; 1 for a detached fragment). */
   lo?: number;
+  /** Raggedness (see CloudCell.rag). */
+  rag?: number;
 }
 
 const cam = ANCHORS.photoCamera;
@@ -105,8 +120,26 @@ function fromPhoto(c: PhotoCell, topBias = 100): CloudCell {
   const yc = c.sh !== undefined ? Math.max(0, Math.min(h * 0.92, altAt(c.u, c.sh, R) - CLOUD_BASE)) : 0.12 * h;
   return {
     x: cam.pos.x + R * Math.sin(az), z: cam.pos.z - R * Math.cos(az),
-    r: c.r * 1000, rAlong: c.r * 1000 * (c.e ?? 1), axis: az, h, yc, lo: c.lo ?? (c.sh !== undefined ? 0.45 : 1),
+    r: c.r * 1000, rAlong: c.r * 1000 * (c.e ?? 1), axis: az, h, yc, lo: c.lo ?? (c.sh !== undefined ? 0.45 : 1), rag: c.rag,
   };
+}
+
+/**
+ * A small fragment along the horizon, authored by its photo column, the row of its top and the row of its BOTTOM
+ * silhouette (the far edge of its base): the range follows from the base row, the height from the top row.
+ */
+function frag(u: number, top: number, bottom: number, r: number, rag: number, e = 0.8): PhotoCell[] {
+  const d = photoRay(u, bottom);
+  const far = (CLOUD_BASE - cam.pos.y) / Math.max(d.y, 1e-3) * Math.hypot(d.x, d.z);   // horizontal range of the far base edge
+  const range = Math.max(3, far / 1000 - r * e);
+  // a torn fragment is a broken, flat piece: a main lump plus a lower shred to each side, ~2-3x wider than tall
+  const px = (r / range) * 1133;                        // footprint radius in photo pixels (focal length 1133 px)
+  const hRows = bottom - top;
+  return [
+    { u, top, range, r: r * 0.7, e, rag },
+    { u: u - px * 0.75, top: top + hRows * 0.4, range: range + r * 0.3, r: r * 0.5, e: e * 0.8, rag: Math.min(1, rag + 0.1) },
+    { u: u + px * 0.7, top: top + hRows * 0.25, range: range - r * 0.2, r: r * 0.55, e: e * 0.8, rag: Math.min(1, rag + 0.1) },
+  ];
 }
 
 // Authored against research/reference.jpeg (1677x943). The lowest visible row of a cloud is the FAR edge of its flat
@@ -115,50 +148,90 @@ function fromPhoto(c: PhotoCell, topBias = 100): CloudCell {
 // the big cluster behind the rocket at ~400 (~6.7 km), the horizon cells at 430-490 (10-25 km).
 // A cluster is a broad body plus turrets whose domes start at the body top (`sh`).
 export const PHOTO_CELLS: PhotoCell[] = [
-  // A: far-left cluster (x 0..170, two crowns at rows ~126 and ~142, dark base at ~330), extends out of the frame
-  { u: -110, top: 160, range: 4.0, r: 0.45 },
-  { u: 55, top: 165, range: 3.95, r: 0.42 },
-  { u: 12, top: 110, range: 3.9, r: 0.24, sh: 175 },
-  { u: 122, top: 126, range: 3.95, r: 0.22, sh: 180 },
-  // B: a ridge rising to the right (x 170..510, tops from row ~285 to ~120)
-  { u: 330, top: 245, range: 4.45, r: 0.42, e: 0.8 },
-  { u: 205, top: 272, range: 4.3, r: 0.18, sh: 300 },
-  { u: 285, top: 212, range: 4.35, r: 0.2, sh: 262 },
-  { u: 352, top: 168, range: 4.4, r: 0.2, sh: 232 },
-  { u: 410, top: 128, range: 4.4, r: 0.21, sh: 205 },
-  { u: 468, top: 106, range: 4.45, r: 0.22, sh: 180 },
-  { u: 505, top: 145, range: 4.5, r: 0.14, sh: 200 },
-  // a small detached fragment high in the frame (top centre, x 380..470, rows 15..77)
-  { u: 428, top: 10, range: 3.4, r: 0.14, sh: 42, lo: 1 },
+  // A: far-left cluster (x 0..170, two crowns at rows ~126 and ~142, soft dark base at ~330), extends out of the frame
+  { u: -110, top: 160, range: 4.0, r: 0.45, rag: 0.4 },
+  { u: 55, top: 165, range: 3.95, r: 0.42, rag: 0.35 },
+  { u: 12, top: 110, range: 3.9, r: 0.24, sh: 175, rag: 0.25 },
+  { u: 122, top: 126, range: 3.95, r: 0.22, sh: 180, rag: 0.25 },
+  // B: a soft, sheared ridge rising to the right (x 170..510, tops from row ~285 to ~120), diffuse underneath
+  { u: 330, top: 245, range: 4.45, r: 0.42, e: 0.8, rag: 0.6 },
+  { u: 205, top: 272, range: 4.3, r: 0.18, sh: 300, rag: 0.6 },
+  { u: 285, top: 212, range: 4.35, r: 0.2, sh: 262, rag: 0.5 },
+  { u: 352, top: 168, range: 4.4, r: 0.2, sh: 232, rag: 0.45 },
+  { u: 410, top: 128, range: 4.4, r: 0.21, sh: 205, rag: 0.4 },
+  { u: 468, top: 106, range: 4.45, r: 0.22, sh: 180, rag: 0.35 },
+  { u: 505, top: 145, range: 4.5, r: 0.14, sh: 200, rag: 0.45 },
   // C: the big cluster behind the rocket (x 500..1240, crowns at rows 80..200, flat dark base at ~400): three broad
-  // bodies, a far body, the central tower with its shoulder, and lumps along the top
-  { u: 640, top: 215, range: 6.1, r: 0.55, e: 1.2 },
-  { u: 760, top: 212, range: 6.2, r: 0.45 },
-  { u: 900, top: 165, range: 6.3, r: 0.62, e: 1.1 },
-  { u: 1085, top: 188, range: 6.4, r: 0.5 },
-  { u: 880, top: 205, range: 6.9, r: 0.6 },
-  { u: 540, top: 228, range: 6.0, r: 0.26, sh: 250 },
-  { u: 668, top: 192, range: 6.0, r: 0.28, sh: 238 },
-  { u: 835, top: 80, range: 6.0, r: 0.42, sh: 200 },
-  { u: 950, top: 100, range: 6.1, r: 0.22, sh: 165 },
-  { u: 1005, top: 135, range: 6.2, r: 0.26, sh: 190 },
-  { u: 1068, top: 162, range: 6.2, r: 0.27, sh: 220 },
-  { u: 1185, top: 122, range: 6.3, r: 0.32, sh: 205 },
-  // flat fragments under and beyond the central cluster (rows 410..470)
-  { u: 625, top: 425, range: 10.0, r: 0.3, e: 0.6 },
-  { u: 960, top: 418, range: 10.5, r: 0.45, e: 0.6 },
-  { u: 1075, top: 432, range: 12.0, r: 0.4, e: 0.6 },
-  // far horizon: a broken bank of flat humilis (rows 440..495)
-  { u: 740, top: 458, range: 16.0, r: 0.9, e: 0.5 },
-  { u: 1180, top: 452, range: 15.0, r: 0.7, e: 0.5 },
-  { u: 1400, top: 450, range: 15.0, r: 0.8, e: 0.5 },
-  { u: 470, top: 468, range: 19.0, r: 1.0, e: 0.5 },
-  { u: 150, top: 460, range: 16.0, r: 0.8, e: 0.5 },
+  // bodies, a far body, the central tower with its shoulder, and lumps along the top. Dense, crisp crowns.
+  { u: 640, top: 215, range: 6.1, r: 0.55, e: 1.2, rag: 0.3 },
+  { u: 760, top: 212, range: 6.2, r: 0.45, rag: 0.3 },
+  { u: 900, top: 165, range: 6.3, r: 0.62, e: 1.1, rag: 0.25 },
+  { u: 1085, top: 188, range: 6.4, r: 0.5, rag: 0.3 },
+  { u: 880, top: 205, range: 6.9, r: 0.6, rag: 0.3 },
+  { u: 540, top: 228, range: 6.0, r: 0.26, sh: 250, rag: 0.2 },
+  { u: 668, top: 192, range: 6.0, r: 0.28, sh: 238, rag: 0.15 },
+  { u: 840, top: 80, range: 6.0, r: 0.47, sh: 200, rag: 0.05 },
+  { u: 935, top: 100, range: 6.1, r: 0.26, sh: 165, rag: 0.05 },
+  { u: 1005, top: 135, range: 6.2, r: 0.26, sh: 190, rag: 0.1 },
+  { u: 1068, top: 162, range: 6.2, r: 0.27, sh: 220, rag: 0.1 },
+  { u: 1185, top: 122, range: 6.3, r: 0.32, sh: 205, rag: 0.1 },
   // right third (mostly behind the launch steam in the photo; seen from other views)
-  { u: 1330, top: 260, range: 8.0, r: 0.45 },
-  { u: 1500, top: 300, range: 7.5, r: 0.45 },
-  { u: 1640, top: 240, range: 8.5, r: 0.5 },
+  { u: 1330, top: 260, range: 8.0, r: 0.45, rag: 0.3 },
+  { u: 1500, top: 300, range: 7.5, r: 0.45, rag: 0.35 },
+  { u: 1640, top: 240, range: 8.5, r: 0.5, rag: 0.3 },
 ];
+
+/**
+ * Horizon under the big cluster: a broken band of small, ragged fragments (reference rows 405..490, x 560..1250),
+ * denser and smaller toward the horizon, with pale haze between them. In the photo they are dark grey with lit rims:
+ * they sit in the long shadows that the low sun casts from cumulus further east (see horizonCasters).
+ */
+export const HORIZON_FRAGS: PhotoCell[] = [
+  ...frag(620, 422, 449, 0.26, 0.55),
+  ...frag(890, 417, 446, 0.2, 0.95, 0.6),
+  ...frag(995, 414, 460, 0.42, 0.6, 0.7),
+  ...frag(1110, 407, 452, 0.36, 0.55),
+  ...frag(1215, 404, 446, 0.3, 0.6),
+  ...frag(575, 468, 490, 0.28, 0.85),
+  ...frag(705, 457, 476, 0.32, 0.8),
+  ...frag(790, 461, 480, 0.28, 0.85),
+  ...frag(880, 454, 481, 0.45, 0.7, 0.6),
+  ...frag(965, 459, 482, 0.36, 0.75),
+  ...frag(1055, 458, 484, 0.42, 0.7),
+  ...frag(1150, 462, 486, 0.38, 0.75),
+  // left of the ridge, low (behind the west steam bank in the photo)
+  ...frag(150, 452, 470, 0.5, 0.7, 0.6),
+  ...frag(420, 462, 484, 0.45, 0.75, 0.6),
+];
+
+/**
+ * Cumulus down-sun (east) of the horizon fragments that put them in shadow at sunrise. Each is placed along the sun's
+ * azimuth from its fragment, far enough out that the photo sees it only behind the east steam bank (column >= 1270),
+ * and tall enough to reach the fragment's shadow ray (which climbs ~100 m per km at a 5.7 degree sun).
+ */
+function horizonCasters(frags: CloudCell[]): CloudCell[] {
+  const sh = new THREE.Vector2(SUN_DIR.x, SUN_DIR.z).normalize();
+  const slope = SUN_DIR.y / Math.hypot(SUN_DIR.x, SUN_DIR.z);
+  const out: CloudCell[] = [];
+  const v = new THREE.Vector3();
+  const r = rng(907);
+  frags.forEach((f) => {
+    for (let k = 4000; k <= 12000; k += 500) {
+      const x = f.x + sh.x * k, z = f.z + sh.y * k;
+      if (Math.max(Math.abs(x), Math.abs(z)) > VOL_EXTENT - 1500) return;
+      v.set(x, CLOUD_BASE, z).project(photoCam);
+      if ((v.x + 1) / 2 * PHOTO_W < 1270) continue;
+      const need = f.h * 0.6 + k * slope + 300;                              // the shadow ray's height above the base
+      if (need > DEPTH * 0.85) return;
+      const rMain = 650 + 250 * r();
+      // vertical development that just reaches `need` (inverse of cumulusCells' aspect for a big cell)
+      const tall = Math.pow(Math.min(1, Math.max(0, ((need - 60) / rMain - 0.55) / 2.5)), 1 / 1.3);
+      out.push(...cumulusCells(x, z, rMain, tall, 0.2 + 0.2 * r(), r() * 6.283, Array.from({ length: 16 }, () => r())));
+      return;
+    }
+  });
+  return out;
+}
 
 // ── cirrus ──────────────────────────────────────────────────────────────────────────────────────────────────────
 /** Cirrus deck altitude (m) the patches are authored for (SKY_LOOK.cirrusAlt). */
@@ -195,33 +268,87 @@ function photoRelAz(x: number, z: number): number {
   return d;
 }
 
+const smooth01 = (e0: number, e1: number, x: number): number => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+
+/**
+ * One procedural cumulus at (x, z): a body dome plus, when it has vertical development, a tower of round lobes.
+ * `rMain` is the footprint radius, `tall` (0..1) the vertical development, `rag` the raggedness, `jit` 16 uniforms.
+ * Real fair-weather cumulus span humilis (a flat dome, h ~ 0.6 r) to congestus (towers ~3x as tall as wide); the
+ * big cells are the tall ones, and ragged cells are the small, decaying ones.
+ */
+export function cumulusCells(x: number, z: number, rMain: number, tall: number, rag: number, axis: number, jit: number[]): CloudCell[] {
+  const out: CloudCell[] = [];
+  const big = smooth01(280, 650, rMain);
+  const aspect = 0.55 + (0.6 + 1.9 * big) * Math.pow(tall, 1.3);          // cell height / footprint radius
+  const h = Math.min(DEPTH * 0.9, rMain * aspect + 60);
+  // body: a dome about as tall as ~0.7 of its radius (the whole cell when it is low), widest right at the base (the
+  // flanks rise from the base; nothing overhangs it)
+  const hb = Math.min(h, rMain * (0.55 + 0.3 * jit[0]) + 50);
+  out.push({ x, z, r: rMain, rAlong: rMain * (0.85 + 0.35 * jit[1]), axis, h: hb, yc: hb * 0.08 * jit[2], rag });
+  // a second, lower body offset to one side: an irregular footprint and a stepped profile instead of one round dome
+  const r2 = rMain * (0.5 + 0.25 * jit[14]), a2 = axis + 1.57 + 2.0 * (jit[15] - 0.5), d2 = rMain * (0.45 + 0.3 * jit[13]);
+  out.push({ x: x + d2 * Math.sin(a2), z: z - d2 * Math.cos(a2), r: r2, rAlong: r2 * (0.9 + 0.4 * jit[12]), axis: a2, h: hb * (0.55 + 0.35 * jit[11]), yc: 0, rag: Math.min(1, rag + 0.1) });
+  if (h < hb + 80) return out;
+  const tRag = Math.max(0, rag - 0.12);
+  // tower: a stack of round lobes rising out of the body, tapering upward (a congestus is broadest low down and
+  // narrows into its cauliflower crown), leaning a little with a random walk
+  // a congestus is about as broad at its crown as low down (a cauliflower head on a column): only a mild taper
+  const r0 = rMain * (0.8 + 0.12 * jit[3]), r1 = r0 * (0.68 + 0.14 * jit[4]);
+  const z0 = hb * 0.4;
+  const n = Math.max(1, Math.min(5, Math.round((h - z0) / (1.25 * 0.5 * (r0 + r1)))));
+  let ox = 0, oz = 0;
+  const lean = axis + 2.1 * jit[5];
+  for (let k = 0; k < n; k++) {
+    const f = n === 1 ? 1 : k / (n - 1);
+    const rt = r0 + (r1 - r0) * f;
+    const ry = rt * (0.9 + 0.2 * jit[(6 + k) % 16]);
+    const top = z0 + (h - z0) * ((k + 1) / n);                              // lobe tops climb evenly to the crown
+    const yc = Math.max(0, top - ry);
+    if (k > 0) {
+      ox += Math.sin(lean + 1.3 * jit[(9 + k) % 16]) * rMain * 0.08;
+      oz -= Math.cos(lean + 1.3 * jit[(9 + k) % 16]) * rMain * 0.08;
+    }
+    // lobes are spaced ~1.25 radii apart and ~2 radii tall, so each reaches well into the one below (one column)
+    out.push({ x: x + ox, z: z + oz, r: rt, rAlong: rt * (0.9 + 0.2 * jit[(11 + k) % 16]), axis: lean, h: top, yc, rag: tRag });
+  }
+  // cauliflower crown: three or four rounded shoulders bulging out around the upper lobes
+  const nS = 3 + Math.floor(jit[13] * 1.99);
+  for (let k = 0; k < nS; k++) {
+    const rs = rMain * (0.34 + 0.16 * jit[(14 + k) % 16]);
+    const a = axis + k * (6.283 / nS) + 0.9 * jit[(2 + k) % 16];
+    const d = r1 * (0.6 + 0.45 * jit[(7 + k) % 16]);
+    const top = z0 + (h - z0) * (0.66 + 0.3 * jit[(10 + k) % 16]);
+    const yc = Math.max(0, top - rs * 0.95);
+    out.push({ x: x + ox * 0.8 + d * Math.sin(a), z: z + oz * 0.8 - d * Math.cos(a), r: rs, rAlong: rs, axis: 0, h: top, yc, lo: 1.3, rag: tRag });
+  }
+  return out;
+}
+
 /** Seeded procedural field of scattered fair-weather cumulus outside the photo's view wedge. */
 function proceduralCells(seed = 1403): CloudCell[] {
   const r = rng(seed);
   const cells: CloudCell[] = [];
-  const S = 2300;                            // jittered grid spacing (m)
+  const S = 2100;                            // jittered grid spacing (m)
   const E = VOL_EXTENT - 1200;
   const halfFov = 36.5 * DEG, margin = 9 * DEG;
   for (let gz = -E; gz <= E; gz += S) for (let gx = -E; gx <= E; gx += S) {
     const x = gx + (r() - 0.5) * S * 0.9, z = gz + (r() - 0.5) * S * 0.9;
     const u = r();                           // draw every number even when the cell is skipped (stable layout)
-    const rMain = 260 + 520 * Math.pow(r(), 1.6);
-    const tall = r(), nTur = Math.floor(r() * 4.2), sa = r() * 6.283;
-    r();
-    const jit = [r(), r(), r(), r(), r(), r(), r(), r(), r(), r(), r(), r()];
-    if (u > 0.5) continue;                   // about half of the grid points carry a cluster
+    const sz = r(), tall = r(), ragR = r(), sa = r() * 6.283;
+    const jit = Array.from({ length: 16 }, () => r());
+    const fx = r(), fa = r(), fd = r();
+    if (u > 0.55) continue;                  // about half of the grid points carry a cumulus
     const dist = Math.hypot(x - cam.pos.x, z - cam.pos.z);
     if (Math.abs(photoRelAz(x, z)) < halfFov + margin && dist > 800) continue;   // the photo wedge is authored
     if (Math.hypot(x, z) < 1800) continue;  // keep the sky right above the pad clear
-    const h = Math.min(DEPTH * 0.8, rMain * (0.6 + 1.5 * tall * tall) + 80);
-    cells.push({ x, z, r: rMain, rAlong: rMain * (0.9 + 0.3 * jit[0]), axis: sa, h, yc: h * (0.05 + 0.15 * jit[4]) });
-    for (let k = 0; k < nTur; k++) {
-      // turrets stay inside the body footprint and sit on it (short lower half), so nothing overhangs like a mushroom
-      const rt = rMain * (0.35 + 0.25 * jit[9 + (k % 3)]);
-      const a = sa + k * 2.1 + jit[1 + k] * 1.2, d = (rMain - rt) * (0.2 + 0.7 * jit[5 + k]);
-      const ht = Math.min(DEPTH * 0.85, h * (0.7 + 0.55 * jit[1 + ((k + 2) % 4)]));
-      const fall = Math.sqrt(Math.max(0, 1 - (d / rMain) ** 2));        // body height fraction above the turret centre
-      cells.push({ x: x + d * Math.sin(a), z: z - d * Math.cos(a), r: rt, rAlong: rt, axis: 0, h: ht, yc: Math.min(ht * 0.7, h * 0.55 * fall), lo: 0.45 });
+    const rMain = 200 + 600 * Math.pow(sz, 1.7);                             // many small cells, a few big ones
+    const big = smooth01(280, 650, rMain);
+    const rag = Math.min(1, 0.12 + 0.8 * (1 - big) * Math.pow(ragR, 1.4));  // small cells are the ragged ones
+    cells.push(...cumulusCells(x, z, rMain, tall, rag, sa, jit));
+    // a torn fractus fragment drifting beside some of the bigger cells
+    if (fx < 0.35 * big) {
+      const a = fa * 6.283, d = rMain * (1.25 + 0.6 * fd), rf = 90 + 110 * fd;
+      cells.push({ x: x + d * Math.sin(a), z: z - d * Math.cos(a), r: rf, rAlong: rf * 1.6, axis: a, h: 90 + 120 * fa, yc: 30, rag: 0.95 });
     }
   }
   return cells;
@@ -230,7 +357,11 @@ function proceduralCells(seed = 1403): CloudCell[] {
 let cellCache: CloudCell[] | null = null;
 /** All cells (memoised: the coverage map and the envelope volume share them). */
 export function allCells(): CloudCell[] {
-  cellCache ??= [...PHOTO_CELLS.map((c) => fromPhoto(c)), ...proceduralCells()];
+  if (!cellCache) {
+    const frags = HORIZON_FRAGS.map((c) => fromPhoto(c));
+    // one shadow caster per fragment (frag() emits a main lump and two shreds)
+    cellCache = [...PHOTO_CELLS.map((c) => fromPhoto(c)), ...frags, ...horizonCasters(frags.filter((_, i) => i % 3 === 0)), ...proceduralCells()];
+  }
   return cellCache;
 }
 
@@ -259,18 +390,27 @@ function edt(f: Float32Array, n: number): void {
   for (let x = 0; x < n; x++) pass((i) => f[i * n + x], (i, val) => { f[i * n + x] = val; });
 }
 
+/** Default raggedness of a cell that does not set one. */
+export const DEFAULT_RAG = 0.2;
+
 /**
- * Coverage map for empty-space skipping. R = union of the cell tops / slab depth (debug view), G = 2D distance inside
- * the footprint union / COVER_DIN, B = 0, A = 2D distance outside the footprints / COVER_DOUT.
+ * Coverage map for empty-space skipping. R = union of the cell tops / slab depth, G = 2D distance inside the footprint
+ * union / COVER_DIN, B = raggedness of the cell that owns the column (the tallest one; outside the footprints the
+ * nearest one within COVER_RAG_REACH), A = 2D distance outside the footprints / COVER_DOUT.
  * `minRes` is a lower bound on the resolution (the map never goes below COVER_RES).
  */
 export function buildCoverTexture(minRes = COVER_RES, cells: CloudCell[] = allCells()): THREE.DataTexture {
   const n = Math.max(minRes, COVER_RES);
   const px = (2 * COVER_EXTENT) / n;
   const top = new Float32Array(n * n);
+  const rag = new Float32Array(n * n).fill(DEFAULT_RAG);
+  // ownership key of the B channel: inside a footprint the tallest cell wins (key = its top > 0), in the fringe ring
+  // the nearest footprint wins (key = -distance), untouched texels keep -Infinity
+  const key = new Float32Array(n * n).fill(-Infinity);
   for (const c of cells) {
     const f = footprintScale(c);
-    const ra = c.rAlong * f, rc = c.r * f, R = Math.max(ra, rc);
+    const ra = c.rAlong * f, rc = c.r * f, R = Math.max(ra, rc) + COVER_RAG_REACH;
+    const cr = c.rag ?? DEFAULT_RAG;
     const i0 = Math.max(0, Math.floor((c.x - R + COVER_EXTENT) / px)), i1 = Math.min(n - 1, Math.ceil((c.x + R + COVER_EXTENT) / px));
     const j0 = Math.max(0, Math.floor((c.z - R + COVER_EXTENT) / px)), j1 = Math.min(n - 1, Math.ceil((c.z + R + COVER_EXTENT) / px));
     const sa = Math.sin(c.axis), ca = Math.cos(c.axis);      // long axis = (sin, -cos) in (x, z)
@@ -278,9 +418,15 @@ export function buildCoverTexture(minRes = COVER_RES, cells: CloudCell[] = allCe
       const ox = -COVER_EXTENT + (i + 0.5) * px - c.x, oz = -COVER_EXTENT + (j + 0.5) * px - c.z;
       const along = ox * sa - oz * ca, across = ox * ca + oz * sa;
       const q2 = (along / ra) ** 2 + (across / rc) ** 2;
-      if (q2 >= 1) continue;
-      const t = c.h * Math.sqrt(1 - q2);
       const o = j * n + i;
+      if (q2 >= 1) {
+        // fringe ring: approximate distance outside the ellipse
+        const dOut = (Math.sqrt(q2) - 1) * Math.min(ra, rc);
+        if (dOut < COVER_RAG_REACH && -dOut > key[o] && key[o] <= 0) { key[o] = -dOut; rag[o] = cr; }
+        continue;
+      }
+      const t = c.h * Math.sqrt(1 - q2);
+      if (t > key[o]) { key[o] = t; rag[o] = cr; }
       if (t > top[o]) top[o] = t;
     }
   }
@@ -295,6 +441,7 @@ export function buildCoverTexture(minRes = COVER_RES, cells: CloudCell[] = allCe
     const dout = top[o] > 0 ? 0 : Math.sqrt(fout[o]) * px - 0.5 * px;
     data[o * 4] = Math.round(255 * Math.min(1, top[o] / DEPTH));
     data[o * 4 + 1] = Math.round(255 * Math.min(1, Math.max(0, din) / COVER_DIN));
+    data[o * 4 + 2] = Math.round(255 * Math.min(1, Math.max(0, rag[o])));
     data[o * 4 + 3] = Math.round(255 * Math.min(1, Math.max(0, dout) / COVER_DOUT));
   }
   const tex = new THREE.DataTexture(data, n, n, THREE.RGBAFormat, THREE.UnsignedByteType);
@@ -306,9 +453,10 @@ export function buildCoverTexture(minRes = COVER_RES, cells: CloudCell[] = allCe
 }
 
 /**
- * Signed distance (m, positive INSIDE) of the smooth union of the cells, cut by the base plane, sampled on a
- * VOL_RES x VOL_RES x VOL_LAYERS grid and stored as 0.5 + d / (2 VOL_RANGE) in an R8 3D texture (x -> u, z -> v,
- * altitude -> w). Cells are binned on a coarse grid, so each voxel column only visits the cells that can reach it.
+ * Signed distance (m, positive INSIDE) of the smooth union of the cells, sampled on a VOL_RES x VOL_RES x VOL_LAYERS
+ * grid and stored as 0.5 + d / (2 VOL_RANGE) in an R8 3D texture (x -> u, z -> v, altitude -> w). The base plane does
+ * NOT cut it (the bake fades the density in over a soft base instead). Cells are binned on a coarse grid, so each
+ * voxel column only visits the cells that can reach it.
  */
 export function buildEnvelopeVolume(cells: CloudCell[] = allCells()): THREE.Data3DTexture {
   const n = VOL_RES, L = VOL_LAYERS;
@@ -358,8 +506,7 @@ export function buildEnvelopeVolume(cells: CloudCell[] = allCells()): THREE.Data
       }
     }
     for (let k = 0; k < L; k++) {
-      const y = VOL_Y0 + (k + 0.5) * VOL_DY;
-      const sd = Math.max(col[k], CLOUD_BASE - y);   // flat base: intersect with the half-space above the base
+      const sd = col[k];
       data[(k * n + j) * n + i] = Math.round(255 * Math.min(1, Math.max(0, 0.5 - sd / (2 * VOL_RANGE))));
     }
   }

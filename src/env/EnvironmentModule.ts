@@ -13,7 +13,7 @@ import { Roads } from './roads.ts';
 import { Buildings } from './buildings.ts';
 import { Vegetation } from './vegetation.ts';
 import { buildCoverTexture } from './cloud-layout.ts';
-import { SkyBaker, SkyDome, type SkyParams } from './sky.ts';
+import { SkyBaker, SkyDome, SkyRebakePolicy, type SkyParams } from './sky.ts';
 
 export interface EnvironmentOptions {
   /** Sandbox pages have a no-op ctx.renderView; set this so the planar reflection renders through renderer.render. */
@@ -30,8 +30,6 @@ const BAKE_RES: Record<QualitySettings['id'], number> = { low: 768, medium: 1024
 const ENV_CUBE_RES = 128;
 const HAZE_CUBE_RES = 64;
 const SPLAT_RES: Record<QualitySettings['id'], number> = { low: 2048, medium: 3072, high: 4096, ultra: 4096 };
-/** Camera travel (m) after which the sky cube is re-baked so cloud parallax stays correct. */
-const REBAKE_DISTANCE = 1000;
 
 export class EnvironmentModule implements Module {
   readonly name = 'env';
@@ -52,6 +50,8 @@ export class EnvironmentModule implements Module {
   private skyJobTarget?: THREE.WebGLCubeRenderTarget;
   private envScene = new THREE.Scene();
   private bakePos = new THREE.Vector3(1e9, 0, 0);
+  /** When to re-bake the sky as the camera moves (the dome reprojects the cube in between; see sky.ts). */
+  private rebake = new SkyRebakePolicy();
   private skyParams!: SkyParams;
   private site: SiteData = { features: [] };
   private splats?: SplatSet;
@@ -125,14 +125,15 @@ export class EnvironmentModule implements Module {
     this.reflDirty = true;
   }
 
-  update(_dt: number, _t: number): void {
+  update(dt: number, _t: number): void {
     this.terrain?.follow(this.ctx.camera.position);
     this.vegetation?.update(this.ctx.camera.position);
     this.updateReflection();
-    // Re-bake the sky if the camera travelled far from the bake point (cloud parallax): one face per frame into the
-    // spare cube, swapped in when all six faces are done, so there is never a frame-time spike.
+    // Re-bake the sky when the camera has moved far enough from the bake point that the reprojected cube would show
+    // disocclusions (SkyRebakePolicy): one strip per frame into the spare cube, swapped in when all six faces are done,
+    // so there is never a frame-time spike.
     const cam = this.ctx.camera.position;
-    if (this.bakeDone && !this.skyJob && cam.distanceTo(this.bakePos) > REBAKE_DISTANCE) {
+    if (this.bakeDone && !this.skyJob && this.rebake.due(cam, this.bakePos, dt)) {
       this.bakePos.copy(cam);
       this.startSkyJob();
     }
