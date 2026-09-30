@@ -283,7 +283,7 @@ export class UiShell {
     return btn;
   }
 
-  /** "Wallpaper loop" opens the loop panel; like export it sits in the top bar, and in the sheet on phones. */
+  /** "Slow drift loop" opens the loop panel; like export it sits in the top bar, and in the sheet on phones. */
   private makeLoopBtn(cls: string): HTMLButtonElement {
     const btn = iconButton({ icon: ICONS.loop, label: () => t('ui.loop'), tip: () => t('ui.loop.tip'), cls: `ui-loop-btn ${cls}` }, () => { this.closeSheet(); this.toggleLoop(); }, this.binder);
     btn.setAttribute('aria-controls', 'ui-loop');
@@ -551,7 +551,7 @@ export class UiShell {
     if (focusBtn && !open) this.lensBtn.focus();
     this.wake();
   }
-  /** Open the Wallpaper loop panel and its framing guide (?loop=1). */
+  /** Open the Slow drift loop panel and its framing guide (?loop=1). */
   openLoop(): void { this.toggleLoop(true); }
   private toggleLoop(open: boolean = !this.loopPanel.open, focusBtn = false): void {
     this.loopPanel.setOpen(open);

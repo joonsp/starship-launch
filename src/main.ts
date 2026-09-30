@@ -18,14 +18,14 @@
 //
 // URL parameters (QA / deep links):
 //   ?preset=photo|noon|night|thermal|clay  ?mode=orbit|photo|walk|fly  ?quality=auto|low|medium|high|ultra
-//   ?edu=1  ?lang=en|fi  ?ui=0 (hide all chrome)  ?drift=1  ?loop=1 (open the Wallpaper loop panel + framing guide)
+//   ?edu=1  ?lang=en|fi  ?ui=0 (hide all chrome)  ?drift=1  ?loop=1 (open the Slow drift loop panel + framing guide)
 //   ?probe=0 (no auto-quality probe)
 //   ?bake=512 (sky cube face size override; for software-rendered QA only)  ?idle=0 (draw every frame, no idle gate)
 // window.app = { ctx, controller, modules, pipeline, ui, setPreset, setQuality, setMode, setEdu, setLang, setDrift,
 //                exportStill, recordLoop, invalidate, stats, ready, frames, drawn } for scripted screenshots (scripts/qa-*.mjs)
 // and the headless wallpaper-loop recorder (scripts/record-loop.mjs).
 //
-// Wallpaper loop (recordLoop): an OFFLINE render, not a screen capture. The frame loop is paused (like exportStill), the
+// Slow drift loop (recordLoop): an OFFLINE render, not a screen capture. The frame loop is paused (like exportStill), the
 // drawing buffer is resized to the output size, the camera takes the output aspect (and, for a wider target, a narrower
 // vertical fov: the recording is exactly the crop the framing guide shows), drift is switched on, and src/record/recorder.ts
 // (lazy-loaded with mediabunny) steps the scene with a fixed dt = 1/fps through step() and encodes each frame.
